@@ -26,15 +26,12 @@
 > **一句话**：选中 IOC → 点击查询 → 多源研判 → 一键跳转深入分析
 
 <p align="center">
-  <img src="docs/images/popup-malicious-light.png" alt="亮色弹窗 - 恶意 IP 研判" width="400">
+  <img src="docs/images/popup-malicious-light.png" alt="亮色弹窗" width="390">&nbsp;&nbsp;
+  <img src="docs/images/popup-malicious-dark.png" alt="暗色弹窗" width="390">
 </p>
 
 <p align="center">
-  <img src="docs/images/popup-malicious-dark.png" alt="暗色弹窗 - 恶意 IP 研判" width="400">
-</p>
-
-<p align="center">
-  <img src="docs/images/options-light.png" alt="设置页 - 亮色" width="780">
+  <img src="docs/images/options-light.png" alt="设置页" width="780">
 </p>
 
 ---
