@@ -1,0 +1,10 @@
+node_modules
+.wxt
+.output
+dist
+*.zip
+*.log
+.DS_Store
+test/ui-harness.js
+ui-v*.png
+.playwright-mcp/

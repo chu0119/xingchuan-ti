@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="zh">
+  <head>
+    <meta charset="utf-8" />
+    <title>威胁情报助手 · UI 测试台</title>
+  </head>
+  <body>
+    <div class="page">
+      <div class="col">
+        <h2>① 工具栏弹窗（亮色 · 恶意 IP）</h2>
+        <div class="pmock">
+          <div class="phead">
+            <div class="plogo"></div>
+            <div class="ptitle">威胁情报助手</div>
+            <button class="pbtn" title="设置">⚙</button>
+          </div>
+          <div class="psearch">
+            <input class="pin" value="185.220.101.42" />
+            <button class="pgo">查询</button>
+          </div>
+          <div id="popupLight"></div>
+          <div class="phist">
+            <div class="phistt">最近查询</div>
+            <div class="phi"><span class="phic mal">●</span>185.220.101.42<span class="phim">恶意 · 78</span></div>
+            <div class="phi"><span class="phic clean">●</span>dns.google<span class="phim">干净 · 0</span></div>
+            <div class="phi"><span class="phic susp">●</span>suspicious-host.ru<span class="phim">可疑 · 52</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col">
+        <h2>② 内容浮窗（暗色 · 恶意 IP，可拖动）</h2>
+        <div class="webbg dark"><div id="contentDark" style="position:absolute;top:24px;right:24px"></div></div>
+      </div>
+
+      <div class="col">
+        <h2>③ 内容浮窗（亮色 · 干净域名）</h2>
+        <div class="webbg"><div id="contentClean" style="position:relative;display:inline-block;margin:24px"></div></div>
+      </div>
+    </div>
+    <script src="./ui-harness.js"></script>
+  </body>
+</html>

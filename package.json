@@ -1,0 +1,40 @@
+{
+  "name": "xingchuan-ti",
+  "version": "0.1.0",
+  "description": "星川威胁情报助手 - 划词识别 IP/域名，多源威胁情报加权研判 + 一键跳转国内主流情报平台",
+  "keywords": ["browser-extension", "threat-intelligence", "security", "cybersecurity", "malware", "phishing"],
+  "author": "星川",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/xingchuan/xingchuan-ti.git"
+  },
+  "bugs": {
+    "url": "https://github.com/xingchuan/xingchuan-ti/issues"
+  },
+  "homepage": "https://github.com/xingchuan/xingchuan-ti#readme",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wxt",
+    "build": "wxt build",
+    "zip": "wxt zip",
+    "prepare": "wxt prepare",
+    "icons": "node scripts/fetch-icons.mjs",
+    "typecheck": "tsc --noEmit",
+    "test": "esbuild test/logic.test.ts --bundle --platform=node --format=esm --outfile=.output/test.mjs && node .output/test.mjs",
+    "test:adapters": "esbuild test/adapters.test.ts --bundle --platform=node --format=esm --outfile=.output/adapters.mjs && node .output/adapters.mjs",
+    "test:e2e": "npm run build && node test/e2e.mjs",
+    "test:popup": "npm run build && node test/popup-check.mjs",
+    "test:live": "esbuild test/live.test.ts --bundle --platform=node --format=esm --outfile=.output/live.mjs && node .output/live.mjs"
+  },
+  "devDependencies": {
+    "@resvg/resvg-js": "^2.6.2",
+    "@types/chrome": "^0.2.6",
+    "@types/node": "^26.2.0",
+    "esbuild": "^0.28.2",
+    "playwright": "^1.62.1",
+    "typescript": "^7.0.2",
+    "wxt": "^0.21.4"
+  }
+}
