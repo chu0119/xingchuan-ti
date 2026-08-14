@@ -245,10 +245,23 @@ export function renderResults(root: HTMLElement | ShadowRoot, p: PanelPayload, o
   root.append(shell);
 }
 
-export function renderLoading(root: HTMLElement | ShadowRoot, text = '正在查询多个情报源…', theme: 'light' | 'dark' = 'light'): void {
-  root.replaceChildren(h('div', { class: 'ti-shell', dataset: { theme } }, [h('div', { class: 'ti-loading' }, [h('div', { class: 'ti-spinner' }), text])]));
+export function renderLoading(root: HTMLElement | ShadowRoot, text = '正在查询多个情报源…', theme: 'light' | 'dark' = 'light', onClose?: () => void): void {
+  const close = onClose
+    ? h('button', { class: 'ti-close-btn', html: SVG.close, title: '关闭', onClick: onClose })
+    : null;
+  root.replaceChildren(
+    h('div', { class: 'ti-shell', style: { position: 'relative' }, dataset: { theme } }, [
+      close,
+      h('div', { class: 'ti-loading' }, [h('div', { class: 'ti-spinner' }), text]),
+    ]),
+  );
 }
 
-export function renderHint(root: HTMLElement | ShadowRoot, text: string, theme: 'light' | 'dark' = 'light'): void {
-  root.replaceChildren(h('div', { class: 'ti-shell', dataset: { theme } }, [h('div', { class: 'ti-empty', text })]));
+export function renderHint(root: HTMLElement | ShadowRoot, text: string, theme: 'light' | 'dark' = 'light', onClose?: () => void): void {
+  const close = onClose
+    ? h('button', { class: 'ti-close-btn', html: SVG.close, title: '关闭', onClick: onClose })
+    : null;
+  root.replaceChildren(
+    h('div', { class: 'ti-shell', style: { position: 'relative' }, dataset: { theme } }, [close, h('div', { class: 'ti-empty', text })]),
+  );
 }

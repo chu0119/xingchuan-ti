@@ -15,7 +15,6 @@ import { copyText } from '../src/lib/clipboard';
 import { h } from '../src/ui/dom';
 
 const FAB_CSS = `.ti-fab{display:inline-flex;align-items:center;gap:6px;background:linear-gradient(135deg,#4f46e5,#06b6d4);color:#fff;padding:7px 13px;border-radius:18px;font:600 12px/1 -apple-system,"Microsoft YaHei",sans-serif;cursor:pointer;box-shadow:0 4px 14px rgba(79,70,229,.42);user-select:none;white-space:nowrap;}`;
-const CLOSE_SVG = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>`;
 
 export default defineContentScript({
   matches: ['http://*/*', 'https://*/*'],
@@ -110,13 +109,7 @@ export default defineContentScript({
       shadow = host.attachShadow({ mode: 'open' });
       shadow.append(h('style', { text: PANEL_CSS }));
       root = h('div', {});
-      const closeBtn = h('button', {
-        html: CLOSE_SVG,
-        title: '关闭',
-        onClick: closePanel,
-        class: 'ti-close-btn',
-      });
-      shadow.append(h('div', { style: { position: 'relative', display: 'inline-block' } }, [closeBtn, root]));
+      shadow.append(h('div', { style: { position: 'relative', display: 'inline-block' } }, [root]));
       document.documentElement.append(host);
       return root;
     }
@@ -150,7 +143,8 @@ export default defineContentScript({
       idx = index;
       const det = list[index]!;
       const rootEl = makeFrame();
-      renderLoading(rootEl);
+      const theme0 = resolvedTheme((await getSettings()).theme);
+      renderLoading(rootEl, '正在查询多个情报源…', theme0, closePanel);
       attachDrag();
       const res = await queryBackground({ kind: 'query', type: det.type, value: det.value, nocache });
       if (!host) return;
@@ -168,7 +162,7 @@ export default defineContentScript({
         };
         renderResults(rootEl, res, opts);
       } else {
-        renderHint(rootEl, res.error || '查询失败，请到设置页检查 API Key');
+        renderHint(rootEl, res.error || '查询失败，请到设置页检查 API Key', theme0, closePanel);
       }
       attachDrag();
     }
