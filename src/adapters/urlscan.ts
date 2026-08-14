@@ -69,8 +69,8 @@ export const urlscan: Adapter = {
         ? `${malicious}/${total} 引擎判定恶意（可疑 ${suspicious}）`
         : `扫描记录存在，无恶意标记`,
       tags: tags.slice(0, 8),
-      detailsUrl: r?.result
-        ? `https://urlscan.io/api/v1/result/${r._id}/`
+      detailsUrl: r?._id
+        ? `https://urlscan.io/result/${r._id}/`
         : queryType === 'ip'
           ? `https://urlscan.io/ip/${queryValue}`
           : `https://urlscan.io/domain/${queryValue}`,

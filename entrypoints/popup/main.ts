@@ -4,6 +4,7 @@ import { detectAll } from '../../src/lib/detect';
 import type { Detected } from '../../src/lib/detect';
 import { getSettings, saveSettings } from '../../src/lib/storage';
 import { clearHistory, getHistory } from '../../src/lib/history';
+import type { HistoryItem } from '../../src/lib/history';
 import { ADAPTERS } from '../../src/adapters';
 import { getUsage } from '../../src/lib/rateLimit';
 import { queryBackground } from '../../src/lib/messaging';
@@ -243,12 +244,20 @@ function renderBatchResults(results: { det: Detected; agg: AggregateResult; err?
   );
 }
 
+function csvEscape(field: string | number): string {
+  const s = String(field ?? '');
+  if (s.includes(',') || s.includes('"') || s.includes('\n')) {
+    return '"' + s.replace(/"/g, '""') + '"';
+  }
+  return s;
+}
+
 function exportBatchCSV(results: { det: Detected; agg: AggregateResult; err?: string }[]) {
   const header = '类型,值,判定,分数,错误\n';
   const body = results.map(r => {
     const v = r.err ? 'error' : r.agg.label;
     const sc = r.agg.score ?? '';
-    return `${r.det.type},${r.det.value},${v},${sc},${r.err || ''}`;
+    return [r.det.type, r.det.value, v, sc, r.err || ''].map(csvEscape).join(',');
   }).join('\n');
   const blob = new Blob([header + body], { type: 'text/csv;charset=utf-8' });
   const url = URL.createObjectURL(blob);
@@ -348,10 +357,10 @@ async function renderHistory() {
   }
 }
 
-function exportHistoryCSV(list: typeof histFilter extends never ? never : Awaited<ReturnType<typeof getHistory>>) {
+function exportHistoryCSV(list: HistoryItem[]) {
   const header = '类型,值,判定,分数,时间\n';
   const body = list.map(it =>
-    `${it.type},${it.value},${it.label ?? ''},${it.score ?? ''},${new Date(it.ts).toISOString()}`
+    [it.type, it.value, it.label ?? '', it.score ?? '', new Date(it.ts).toISOString()].map(csvEscape).join(',')
   ).join('\n');
   const blob = new Blob([header + body], { type: 'text/csv;charset=utf-8' });
   const url = URL.createObjectURL(blob);

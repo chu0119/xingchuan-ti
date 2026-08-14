@@ -119,4 +119,7 @@ export const PANEL_CSS = `
 .ti-foot a{ color:var(--accent); text-decoration:none; cursor:pointer; }
 .ti-foot a:hover{ text-decoration:underline; }
 .ti-escalation{ padding:8px 12px; background:rgba(251,140,0,.12); color:#e65100; font-size:12px; font-weight:600; border-bottom:1px solid rgba(251,140,0,.2); }
+.ti-close-btn{ position:absolute; top:8px; right:8px; width:26px; height:26px; display:flex; align-items:center; justify-content:center;
+  border:none; border-radius:7px; background:var(--chipbg); color:var(--muted); cursor:pointer; z-index:2; transition:.12s; }
+.ti-close-btn:hover{ background:var(--hover); color:var(--fg); }
 `;

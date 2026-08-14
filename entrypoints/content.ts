@@ -103,11 +103,7 @@ export default defineContentScript({
         html: CLOSE_SVG,
         title: '关闭',
         onClick: closePanel,
-        style: {
-          position: 'absolute', top: '8px', right: '8px', width: '26px', height: '26px', display: 'flex',
-          alignItems: 'center', justifyContent: 'center', border: 'none', borderRadius: '7px', background: 'rgba(0,0,0,.06)',
-          color: '#646a73', cursor: 'pointer', zIndex: '2',
-        },
+        class: 'ti-close-btn',
       });
       shadow.append(h('div', { style: { position: 'relative', display: 'inline-block' } }, [closeBtn, root]));
       document.documentElement.append(host);

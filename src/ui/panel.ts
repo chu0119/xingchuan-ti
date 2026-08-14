@@ -208,8 +208,9 @@ export function renderResults(root: HTMLElement | ShadowRoot, p: PanelPayload, o
   }
   if (opts.onClose) acts.push(ibtn(SVG.close, '关闭', opts.onClose));
 
+  const TYPE_LABEL: Record<string, string> = { ip: 'IP', domain: 'DOMAIN', url: 'URL', hash: 'HASH' };
   const head = h('div', { class: 'ti-head' }, [
-    h('span', { class: 'ti-typechip', text: p.type === 'ip' ? 'IP' : 'DOMAIN' }),
+    h('span', { class: 'ti-typechip', text: TYPE_LABEL[p.type] ?? p.type.toUpperCase() }),
     h('span', { class: 'ti-value', text: p.value }),
     h('div', { class: 'ti-acts' }, acts),
   ]);
@@ -244,10 +245,10 @@ export function renderResults(root: HTMLElement | ShadowRoot, p: PanelPayload, o
   root.append(shell);
 }
 
-export function renderLoading(root: HTMLElement | ShadowRoot, text = '正在查询多个情报源…'): void {
-  root.replaceChildren(h('div', { class: 'ti-shell', dataset: { theme: 'light' } }, [h('div', { class: 'ti-loading' }, [h('div', { class: 'ti-spinner' }), text])]));
+export function renderLoading(root: HTMLElement | ShadowRoot, text = '正在查询多个情报源…', theme: 'light' | 'dark' = 'light'): void {
+  root.replaceChildren(h('div', { class: 'ti-shell', dataset: { theme } }, [h('div', { class: 'ti-loading' }, [h('div', { class: 'ti-spinner' }), text])]));
 }
 
-export function renderHint(root: HTMLElement | ShadowRoot, text: string): void {
-  root.replaceChildren(h('div', { class: 'ti-shell', dataset: { theme: 'light' } }, [h('div', { class: 'ti-empty', text })]));
+export function renderHint(root: HTMLElement | ShadowRoot, text: string, theme: 'light' | 'dark' = 'light'): void {
+  root.replaceChildren(h('div', { class: 'ti-shell', dataset: { theme } }, [h('div', { class: 'ti-empty', text })]));
 }

@@ -77,8 +77,8 @@ async function runQuery(
   const verdictEscalated = prevLabel === 'clean' && (agg.label === 'suspicious' || agg.label === 'malicious');
 
   await setCached(type, value, { results, aggregate: agg }, settings.cacheTtlMin);
-  // 记入最近查询历史（仅本地）
-  addHistory({ type, value, ts: Date.now(), label: agg.label, score: agg.score }).catch(() => {});
+  // 记入最近查询历史（仅本地，确保写入完成后再返回）
+  await addHistory({ type, value, ts: Date.now(), label: agg.label, score: agg.score });
 
   // 恶性 verdict 桌面通知
   if (settings.notifyOnMalicious && agg.label === 'malicious' && agg.score != null) {

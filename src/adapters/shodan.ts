@@ -15,7 +15,9 @@ export const shodan: Adapter = {
     if (type !== 'ip') throw new Error('Shodan 仅支持 IP');
     let data: any;
     try {
-      data = await fetchJson(`https://api.shodan.io/shodan/host/${encodeURIComponent(value)}?key=${encodeURIComponent(key)}`);
+      data = await fetchJson(`https://api.shodan.io/shodan/host/${encodeURIComponent(value)}`, {
+        headers: { 'X-Shodan-Key': key },
+      });
     } catch (e) {
       if (e instanceof HttpError && e.status === 404) {
         return {

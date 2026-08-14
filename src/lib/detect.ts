@@ -61,7 +61,14 @@ export function detectIndicator(raw: string): Detected | null {
   // 优先识别 URL（含协议/路径）
   const URL_RE = /^https?:\/\/[^\s,;|()\[\]"'<>]+$/i;
   if (URL_RE.test(trimmed)) {
-    return { type: 'url', value: trimmed.toLowerCase() };
+    // 只对 hostname 小写化，保留路径大小写
+    try {
+      const u = new URL(trimmed);
+      u.hostname = u.hostname.toLowerCase();
+      return { type: 'url', value: u.toString() };
+    } catch {
+      return { type: 'url', value: trimmed.toLowerCase() };
+    }
   }
 
   // 识别文件哈希（MD5/SHA1/SHA256）

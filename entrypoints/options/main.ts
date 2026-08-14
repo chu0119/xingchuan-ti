@@ -159,7 +159,12 @@ async function encryptConfig(plaintext: string, password: string): Promise<strin
   result.set(salt, 0);
   result.set(iv, salt.length);
   result.set(new Uint8Array(encrypted), salt.length + iv.length);
-  return btoa(String.fromCharCode(...result));
+  // 分块转 base64，避免大数组 spread 栈溢出
+  let binary = '';
+  for (let i = 0; i < result.length; i += 8192) {
+    binary += String.fromCharCode(...result.subarray(i, i + 8192));
+  }
+  return btoa(binary);
 }
 fileInput.addEventListener('change', async () => {
   const f = (fileInput as HTMLInputElement).files?.[0];
