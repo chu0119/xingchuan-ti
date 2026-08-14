@@ -55,10 +55,10 @@ for (const [envName, id] of [['VT_KEY', 'virustotal'], ['OTX_KEY', 'otx'], ['SHO
     // ===== 2. 查询恶意 IP =====
     await pop.fill('.pp-in', '185.220.101.42');
     await pop.click('.pp-go');
-    await pop.waitForSelector('.ti-smini', { timeout: 30000 });
+    await pop.waitForSelector('.ti-srow', { timeout: 30000 });
     await sleep(1500);
-    // 点击第一个源方块展开详情
-    await pop.locator('.ti-smini').first().click();
+    // 点击第一个源行展开详情
+    await pop.locator('.ti-srow').first().click();
     await sleep(400);
     await pop.screenshot({ path: path.join(shotDir, 'popup-malicious-light.png'), fullPage: true });
     console.log('✓ popup-malicious-light.png');

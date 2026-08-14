@@ -33,9 +33,6 @@ export interface RenderOpts {
 }
 
 const VERDICT_TEXT: Record<string, string> = { malicious: '恶意', suspicious: '可疑', clean: '干净', unknown: '未知' };
-const SHORT: Record<string, string> = {
-  virustotal: 'VirusTotal', abuseipdb: 'AbuseIPDB', otx: 'OTX', shodan: 'Shodan', greynoise: 'GreyNoise', threatbook: '微步',
-};
 
 const SVG = {
   copy: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>`,
@@ -72,29 +69,10 @@ function ibtn(svg: string, title: string, onClick?: () => void) {
   return h('button', { class: 'ti-ibtn', html: svg, title, type: 'button', ...(onClick ? { onClick } : {}) });
 }
 
-function ring(score: number | null, color: string): string {
-  const r = 26;
-  const C = 2 * Math.PI * r;
-  const frac = Math.max(0, Math.min(1, (score ?? 0) / 100));
-  const dash = score == null ? 0 : C * frac;
-  const center = score == null ? '?' : String(score);
-  return `<svg width="60" height="60" viewBox="0 0 60 60">
-    <circle class="ti-ringtrack" cx="30" cy="30" r="${r}" fill="none" stroke-width="6"/>
-    <circle cx="30" cy="30" r="${r}" fill="none" stroke="${color}" stroke-width="6" stroke-linecap="round"
-      stroke-dasharray="${dash.toFixed(1)} ${C.toFixed(1)}" transform="rotate(-90 30 30)"/>
-    <text x="30" y="31" text-anchor="middle" dominant-baseline="central" font-size="15" font-weight="700" fill="${color}">${center}</text>
-  </svg>`;
-}
-
 function verdictChip(verdict: Verdict | 'error') {
   const text = verdict === 'error' ? '出错' : VERDICT_TEXT[verdict] ?? verdict;
   const color = verdict === 'error' ? LABEL_COLOR.malicious : LABEL_COLOR[verdict];
   return h('span', { class: 'ti-vchip', text, style: { background: color } });
-}
-
-function dot(v: Verdict | 'error') {
-  const c = v === 'error' ? LABEL_COLOR.malicious : LABEL_COLOR[v];
-  return h('span', { class: 'dot', style: { background: c } });
 }
 
 function barFor(r: QueryResult) {
@@ -102,74 +80,60 @@ function barFor(r: QueryResult) {
   return h('div', { class: 'ti-bar' }, [h('i', { style: { width: `${Math.max(4, r.score)}%`, background: LABEL_COLOR[r.verdict] } })]);
 }
 
-/** 详情卡：r 为 null 时显示提示；点击方块后传入具体源，持久显示。 */
-function renderDetail(el: HTMLElement, r: QueryResult | null) {
-  el.replaceChildren();
-  if (!r) {
-    el.classList.add('idle');
-    el.append(h('div', { class: 'ti-dhint', text: '点击方块查看该源的判定详情' }));
-    return;
-  }
-  el.classList.remove('idle');
-  const v: Verdict | 'error' = r.error ? 'error' : r.verdict;
-
-  // 顶部行：源名 + 判定标签 + 分数 + 详情链接
-  const topRow = h('div', { class: 'ti-dtop' }, [
-    h('span', { class: 'ti-name', text: r.sourceName }),
-    verdictChip(v),
-    h('span', { class: 'ti-srcscore', text: r.error ? '' : r.score == null ? '—' : String(r.score) }),
-    r.detailsUrl ? h('a', { class: 'ti-src-link', text: '详情 →', href: r.detailsUrl, target: '_blank', rel: 'noopener' }) : null,
+/** 源列表：紧凑单行 + 点击手风琴展开详情（单开） */
+function sourceList(results: QueryResult[]) {
+  const wrap = h('div', { class: 'ti-section' }, [
+    h('div', { class: 'ti-stitle' }, ['多源研判', h('span', { class: 'ti-count', text: String(results.length) })]),
   ]);
-  el.append(topRow);
-
-  if (r.error) {
-    // 错误状态：简洁展示错误信息，不显示图标/标签/评分条
-    el.append(h('div', { class: 'ti-err-row' }, [
-      h('span', { class: 'ti-err-icon', text: '⚠' }),
-      h('span', { class: 'ti-summary ti-err', text: r.error }),
-    ]));
-  } else {
-    if (r.summary) el.append(h('div', { class: 'ti-summary', text: r.summary }));
-    const bar = barFor(r);
-    if (bar) el.append(bar);
-    if (r.tags.length) {
-      el.append(h('div', { class: 'ti-tags' }, r.tags.slice(0, 8).map(t => h('span', { class: 'ti-tag', text: t }))));
-    }
-  }
-}
-
-function sourceSection(results: QueryResult[]) {
-  const detailEl = h('div', { class: 'ti-srcdetail' });
-  renderDetail(detailEl, null);
-  const grid = h('div', { class: 'ti-srcgrid' });
-  const tiles: HTMLElement[] = [];
   for (const r of results) {
     const v: Verdict | 'error' = r.error ? 'error' : r.verdict;
     const sc = r.error ? '!' : r.score == null ? '—' : String(r.score);
-    const tile = h('div', { class: 'ti-smini', dataset: { v } }, [
+    const row = h('div', { class: 'ti-srow' }, [
       makeIcon(r.source, '#646a73'),
-      h('span', { class: 'nm', text: SHORT[r.source] || r.sourceName }),
-      h('span', { class: 'sc' }, [dot(v), h('span', { text: sc })]),
-      h('div', { class: 'ti-sgo', text: '查看详情' }),
+      h('span', { class: 'nm', text: r.sourceName }),
+      verdictChip(v),
+      h('span', { class: 'sc', text: sc }),
+      h('span', { class: 'ti-arrow', text: '▾' }),
     ]);
-    tile.addEventListener('click', () => {
-      tiles.forEach(t => t.classList.remove('sel'));
-      tile.classList.add('sel');
-      renderDetail(detailEl, r);
+    // 详情面板（默认收起）
+    const detail = h('div', { class: 'ti-srow-detail', style: { display: 'none' } });
+    if (r.error) {
+      detail.append(h('div', { class: 'ti-err-row' }, [
+        h('span', { class: 'ti-err-icon', text: '⚠' }),
+        h('span', { class: 'ti-summary ti-err', text: r.error }),
+      ]));
+    } else {
+      if (r.summary) detail.append(h('div', { class: 'ti-summary', text: r.summary }));
+      const bar = barFor(r);
+      if (bar) detail.append(bar);
+      if (r.tags.length) {
+        detail.append(h('div', { class: 'ti-tags' }, r.tags.slice(0, 8).map(t => h('span', { class: 'ti-tag', text: t }))));
+      }
+      if (r.detailsUrl) {
+        detail.append(h('a', {
+          class: 'ti-src-link', text: '在源站查看详情 →', href: r.detailsUrl,
+          target: '_blank', rel: 'noopener', style: { display: 'inline-block', marginTop: '4px' },
+        }));
+      }
+    }
+    row.addEventListener('click', () => {
+      const wasOpen = detail.style.display !== 'none';
+      // 单开手风琴：收起其他行
+      wrap.querySelectorAll('.ti-srow-detail').forEach(d => ((d as HTMLElement).style.display = 'none'));
+      wrap.querySelectorAll('.ti-srow.open').forEach(x => x.classList.remove('open'));
+      if (!wasOpen) {
+        detail.style.display = '';
+        row.classList.add('open');
+      }
     });
-    grid.append(tile);
-    tiles.push(tile);
+    wrap.append(row, detail);
   }
-  return h('div', { class: 'ti-section' }, [
-    h('div', { class: 'ti-stitle' }, ['多源研判', h('span', { class: 'ti-count', text: String(results.length) })]),
-    grid,
-    detailEl,
-  ]);
+  return wrap;
 }
 
 function jumpSection(type: IndicatorType, value: string) {
   const all = platformsFor(type);
-  const group = (title: string, list: typeof all) => {
+  const row = (tag: string, list: typeof all) => {
     const icons = list
       .map(p => {
         const url = p.buildUrl(type, value);
@@ -184,20 +148,18 @@ function jumpSection(type: IndicatorType, value: string) {
       })
       .filter(Boolean);
     if (!icons.length) return null;
-    return h('div', {}, [h('div', { class: 'ti-jlab', text: title }), h('div', { class: 'ti-jumpline' }, icons)]);
+    return h('div', { class: 'ti-jrow' }, [h('span', { class: 'ti-jtag', text: tag }), h('div', { class: 'ti-jumpline' }, icons)]);
   };
-  const kids = [
+  return h('div', { class: 'ti-section' }, [
     h('div', { class: 'ti-stitle' }, ['一键跳转']),
-    group('国内', all.filter(p => p.region === 'cn')),
-    group('国外', all.filter(p => p.region === 'intl')),
-  ].filter(Boolean);
-  return h('div', { class: 'ti-section' }, kids);
+    row('国内', all.filter(p => p.region === 'cn')),
+    row('国外', all.filter(p => p.region === 'intl')),
+  ]);
 }
 
 export function renderResults(root: HTMLElement | ShadowRoot, p: PanelPayload, opts: RenderOpts = {}): void {
   root.replaceChildren();
   const agg = p.aggregate;
-  const color = LABEL_COLOR[agg.label];
   const labelText = agg.label === 'unknown' ? '无数据' : VERDICT_TEXT[agg.label];
 
   const acts: Node[] = [];
@@ -216,21 +178,17 @@ export function renderResults(root: HTMLElement | ShadowRoot, p: PanelPayload, o
     h('span', { class: 'ti-value', text: p.value }),
     h('div', { class: 'ti-acts' }, acts),
   ]);
-  const flagInfo = agg.flagCount > 0
-    ? ` · ${agg.flagCount} 源确认${agg.label === 'malicious' ? '恶意' : '可疑'}`
-    : '';
-  const cleanInfo = agg.cleanCount > 0 ? ` · ${agg.cleanCount} 源查无记录` : '';
-  const scoreband = h('div', { class: 'ti-scoreband' }, [
-    h('div', { class: 'ti-ring', html: ring(agg.score, color) }),
-    h('div', { class: 'ti-sinfo' }, [
-      h('div', { class: 'lab', text: labelText, style: { color } }),
-      h('div', { class: 'meta', text: `综合置信度 ${agg.score == null ? '—' : agg.score + '/100'} · ${agg.contributors} 源参与${flagInfo}${cleanInfo}` }),
-      h('div', { class: 'ti-legend' }, [
-        h('span', {}, [h('i', { style: { background: LABEL_COLOR.malicious } }), '恶意']),
-        h('span', {}, [h('i', { style: { background: LABEL_COLOR.suspicious } }), '可疑']),
-        h('span', {}, [h('i', { style: { background: LABEL_COLOR.clean } }), '干净']),
-      ]),
+  // 判定横幅：全宽彩色渐变（红=恶意/橙=可疑/绿=干净/灰=无数据）
+  const subParts: string[] = [];
+  if (agg.flagCount > 0) subParts.push(`${agg.flagCount} 源确认${agg.label === 'malicious' ? '恶意' : '可疑'}`);
+  if (agg.cleanCount > 0) subParts.push(`${agg.cleanCount} 源查无记录`);
+  subParts.push(`${agg.contributors} 源参与`);
+  const banner = h('div', { class: 'ti-verdict', dataset: { v: agg.label } }, [
+    h('div', { class: 'v-main' }, [
+      h('span', { class: 'v-label', text: labelText }),
+      h('span', { class: 'v-score', text: agg.score == null ? '—' : `${agg.score}/100` }),
     ]),
+    h('div', { class: 'v-sub', text: subParts.join(' · ') }),
   ]);
   // verdict 升级告警条
   const escalation = opts.verdictEscalated
@@ -242,7 +200,7 @@ export function renderResults(root: HTMLElement | ShadowRoot, p: PanelPayload, o
     opts.onOpenSettings ? h('a', { text: '设置', onClick: opts.onOpenSettings }) : null,
   ]);
 
-  const kids: (Node | null)[] = [head, escalation, scoreband, sourceSection(p.results), jumpSection(p.type, p.value), foot];
+  const kids: (Node | null)[] = [head, escalation, banner, sourceList(p.results), jumpSection(p.type, p.value), foot];
   const shell = h('div', { class: 'ti-shell', dataset: { theme: opts.theme ?? 'light' } }, kids.filter(Boolean) as Node[]);
   root.append(shell);
 }

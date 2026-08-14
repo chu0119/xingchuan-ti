@@ -181,12 +181,12 @@ const panelInfoSrc = `(() => {
     // ============ A. popup ============
     console.log('\n────── A. popup ──────');
 
-    await t('A1', 'popup 查询 8.8.8.8 → 出现 .ti-smini（≥1 源）', async () => {
+    await t('A1', 'popup 查询 8.8.8.8 → 出现 .ti-srow（≥1 源）', async () => {
       await pop.fill('.pp-in', '8.8.8.8');
       await pop.click('.pp-go');
-      await pop.waitForSelector('.ti-smini', { timeout: 60000 });
+      await pop.waitForSelector('.ti-srow', { timeout: 60000 });
       await sleep(800);
-      const n = await pop.locator('.ti-smini').count();
+      const n = await pop.locator('.ti-srow').count();
       assert(n >= 1, `源方块数量 ${n} < 1`);
     });
 
@@ -272,12 +272,12 @@ const panelInfoSrc = `(() => {
     });
 
     let panelReady = false;
-    await t('B2', '点击 fab → 面板出现 .ti-smini', async () => {
+    await t('B2', '点击 fab → 面板出现 .ti-srow', async () => {
       await page.locator('.ti-fab').first().click();
-      await page.waitForSelector('.ti-smini', { timeout: 90000 });
+      await page.waitForSelector('.ti-srow', { timeout: 90000 });
       await sleep(600);
-      panelReady = (await page.locator('.ti-smini').count()) >= 1;
-      assert(panelReady, '面板中无 .ti-smini');
+      panelReady = (await page.locator('.ti-srow').count()) >= 1;
+      assert(panelReady, '面板中无 .ti-srow');
     });
 
     // B3 拆两步：结果态（当前面板） + 加载态（另查未缓存 IP）
@@ -301,7 +301,7 @@ const panelInfoSrc = `(() => {
       }
       assert(sample, '未能采样到加载态（响应过快）');
       assert(sample.close === 1, `加载态关闭按钮数量 ${sample.close} ≠ 1`);
-      await page.waitForSelector('.ti-smini', { timeout: 90000 });
+      await page.waitForSelector('.ti-srow', { timeout: 90000 });
       await sleep(400);
       const n2 = (await page.evaluate(panelInfoSrc)).close;
       assert(n2 === 1, `加载后结果态关闭按钮数量 ${n2} ≠ 1`);

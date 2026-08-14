@@ -39,15 +39,16 @@ export const PANEL_CSS = `
 .ti-ibtn:hover{ background:var(--hover); color:var(--fg); }
 .ti-nav{ font-size:11px; color:var(--muted); font-variant-numeric:tabular-nums; padding:0 2px; }
 
-/* 评分带 */
-.ti-scoreband{ display:flex; align-items:center; gap:14px; padding:14px 14px 12px; }
-.ti-ring{ flex:none; }
-.ti-ringtrack{ stroke:var(--bar); }
-.ti-sinfo{ min-width:0; }
-.ti-sinfo .lab{ font-size:16px; font-weight:700; }
-.ti-sinfo .meta{ color:var(--muted); font-size:12px; margin-top:2px; }
-.ti-legend{ display:flex; flex-wrap:wrap; gap:9px; margin-top:7px; font-size:11px; color:var(--sub); }
-.ti-legend i{ display:inline-block; width:8px; height:8px; border-radius:2px; margin-right:3px; vertical-align:middle; }
+/* 判定横幅：全宽彩色渐变，视觉锚点 */
+.ti-verdict{ padding:13px 14px 11px; color:#fff; }
+.ti-verdict .v-main{ display:flex; align-items:baseline; gap:10px; }
+.ti-verdict .v-label{ font-size:20px; font-weight:800; letter-spacing:.03em; line-height:1.2; }
+.ti-verdict .v-score{ font-size:13px; font-weight:600; opacity:.92; font-variant-numeric:tabular-nums; }
+.ti-verdict .v-sub{ font-size:11px; opacity:.82; margin-top:3px; }
+.ti-verdict[data-v="malicious"]{ background:linear-gradient(135deg,#c62828 0%,#ef5350 100%); }
+.ti-verdict[data-v="suspicious"]{ background:linear-gradient(135deg,#e65100 0%,#ffa726 100%); }
+.ti-verdict[data-v="clean"]{ background:linear-gradient(135deg,#2e7d32 0%,#66bb6a 100%); }
+.ti-verdict[data-v="unknown"]{ background:linear-gradient(135deg,#546e7a 0%,#90a4ae 100%); }
 
 /* 分区 */
 .ti-section{ padding:2px 12px 8px; }
@@ -55,23 +56,17 @@ export const PANEL_CSS = `
   text-transform:uppercase; letter-spacing:.05em; margin:10px 2px 7px; }
 .ti-count{ background:var(--chipbg); color:var(--chips); border-radius:10px; padding:1px 7px; font-size:10px; }
 
-/* 多源研判：方块网格 + 悬停“查看详情” + 点击展开持久详情 */
-.ti-srcgrid{ display:grid; grid-template-columns:repeat(3,1fr); gap:7px; }
-.ti-smini{ position:relative; display:flex; align-items:center; gap:6px; padding:7px 8px; border-radius:8px; border:1px solid var(--border); background:var(--bg); cursor:pointer; transition:.12s; overflow:hidden; }
-.ti-smini .ti-ic{ width:18px; height:18px; border-radius:5px; background:#fff; display:flex; align-items:center; justify-content:center; flex:none; box-shadow:0 0 0 1px var(--border); overflow:hidden; }
-.ti-smini .ti-ic img{ width:13px; height:13px; object-fit:contain; }
-.ti-smini .nm{ font-size:11px; font-weight:600; color:var(--fg); flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.ti-smini .sc{ display:flex; align-items:center; gap:4px; font-size:11px; color:var(--muted); font-variant-numeric:tabular-nums; flex:none; }
-.ti-smini .dot{ width:7px; height:7px; border-radius:50%; flex:none; }
-.ti-smini[data-v="malicious"]{ border-color:rgba(229,57,53,.5); }
-.ti-smini[data-v="suspicious"]{ border-color:rgba(251,140,0,.5); }
-.ti-smini[data-v="clean"]{ border-color:rgba(67,160,71,.45); }
-.ti-smini:hover{ border-color:var(--accent); }
-.ti-smini.sel{ border-color:var(--accent); box-shadow:0 0 0 1px var(--accent); }
-.ti-sgo{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; gap:4px; background:var(--softbg); color:var(--accent); font-size:11px; font-weight:600; opacity:0; transition:opacity .12s; }
-.ti-smini:hover .ti-sgo{ opacity:1; }
-.ti-srcdetail{ margin-top:9px; border-radius:10px; border:1px solid var(--border); background:var(--bg); padding:9px 11px; min-height:18px; }
-.ti-srcdetail.idle{ background:var(--softbg); }
+/* 多源研判：紧凑单行 + 点击手风琴展开详情 */
+.ti-srow{ display:flex; align-items:center; gap:8px; padding:7px 12px; border-bottom:1px solid var(--border2); cursor:pointer; transition:background .1s; }
+.ti-srow:hover,.ti-srow.open{ background:var(--softbg); }
+.ti-srow .ti-ic{ width:18px; height:18px; border-radius:5px; background:#fff; display:flex; align-items:center; justify-content:center; flex:none; box-shadow:0 0 0 1px var(--border); overflow:hidden; }
+.ti-srow .ti-ic img{ width:13px; height:13px; object-fit:contain; }
+.ti-srow .nm{ flex:1; min-width:0; font-weight:600; font-size:12.5px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.ti-srow .sc{ font-size:11.5px; color:var(--muted); font-variant-numeric:tabular-nums; min-width:22px; text-align:right; }
+.ti-srow .ti-arrow{ font-size:10px; color:var(--muted); transition:transform .15s; flex:none; }
+.ti-srow.open .ti-arrow{ transform:rotate(180deg); }
+.ti-srow-detail{ padding:7px 12px 9px 38px; background:var(--softbg); border-bottom:1px solid var(--border2); }
+.ti-srcgrid{ display:none; }
 .ti-dhint{ color:var(--muted); font-size:12px; }
 .ti-dtop{ display:flex; align-items:center; gap:8px; margin-bottom:5px; }
 .ti-name{ font-weight:600; font-size:13px; }
@@ -93,8 +88,9 @@ export const PANEL_CSS = `
 .ti-jsep{ display:flex; align-items:center; gap:8px; margin:9px 2px 6px; }
 .ti-jsep span{ font-size:11px; color:var(--muted); }
 .ti-jsep hr{ flex:1; border:none; border-top:1px solid var(--border2); }
-/* 一键跳转：国内/国外各一行，悬停弹厂家名 */
-.ti-jlab{ font-size:11px; color:var(--muted); margin:9px 2px 5px; }
+/* 一键跳转：标签与图标同行，更紧凑 */
+.ti-jrow{ display:flex; align-items:center; gap:8px; margin:7px 0 2px; }
+.ti-jrow > .ti-jtag{ font-size:10.5px; color:var(--muted); flex:none; width:26px; user-select:none; }
 .ti-jumpline{ display:flex; flex-wrap:wrap; gap:6px; align-items:center; }
 .ti-jico{ position:relative; width:28px; height:28px; border-radius:7px; background:#fff; display:flex; align-items:center; justify-content:center;
   flex:none; box-shadow:0 1px 2px rgba(0,0,0,.12); transition:.12s; }

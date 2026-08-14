@@ -67,10 +67,10 @@ fs.rmSync(profile, { recursive: true, force: true });
     // ===== 1. popup 实查 8.8.8.8 → 多源结果 =====
     await pop.fill('.pp-in', '8.8.8.8');
     await pop.click('.pp-go');
-    await pop.waitForSelector('.ti-smini', { timeout: 30000 });
+    await pop.waitForSelector('.ti-srow', { timeout: 30000 });
     await sleep(1200);
-    const blocks = await pop.locator('.ti-smini').count();
-    const errBlocks = await pop.locator('.ti-smini[data-v="error"]').count();
+    const blocks = await pop.locator('.ti-srow').count();
+    const errBlocks = await pop.locator('.ti-srow[data-v="error"]').count();
     const popImgs = await pop.locator('.ti-jico img').count();
     const popTiles = await pop.locator('.ti-jico').count();
     console.log(`[popup] 源方块 ${blocks}（出错 ${errBlocks}）；跳转图标 ${popImgs}/${popTiles}`);
