@@ -1,6 +1,6 @@
 {
   "name": "xingchuan-ti",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "星川威胁情报助手 - 划词识别 IP/域名，多源威胁情报加权研判 + 一键跳转国内主流情报平台",
   "keywords": ["browser-extension", "threat-intelligence", "security", "cybersecurity", "malware", "phishing"],
   "author": "星川",

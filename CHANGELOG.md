@@ -2,6 +2,18 @@
 
 本文件记录星川威胁情报助手的所有重要变更。
 
+## [0.6.0] - 2026-08-14
+
+### 🔧 安全加固
+- **host_permissions 收紧**：从 `https://www.virustotal.com/*` 收紧为 `https://www.virustotal.com/api/v3/*`，遵循最小权限原则
+- **Content Security Policy 声明**：manifest 中显式声明严格 CSP，防止 XSS 攻击
+- **配置导出加密**：含 Key 的导出文件支持 AES-GCM 密码保护（Web Crypto API）
+- **API Key 健康检查**：页面加载时静默测试各 Key 有效性，失效时输入框标红提醒
+
+### 🧪 测试
+- 逻辑单测 88 个全过
+- 构建产物 158.47 kB
+
 ## [0.5.0] - 2026-08-14
 
 ### ✨ 新增

@@ -57,6 +57,27 @@ const settings = await getSettings();
 document.documentElement.dataset.theme = resolvedTheme(settings.theme);
 document.head.append(h('style', { text: THEME_VARS }), h('style', { text: PANEL_CSS }), h('style', { text: CSS }));
 
+// API Key 健康检查（页面加载时静默测试各 Key）
+async function checkKeyHealth() {
+  for (const a of ADAPTERS) {
+    const s = settings.sources[a.id];
+    if (!s?.enabled || !s.apiKey || !a.requiresKey) continue;
+    try {
+      // 用一个常见 IP 测试（8.8.8.8），忽略结果，只看是否报错
+      await a.query('ip', '8.8.8.8', s.apiKey);
+      const el = document.getElementById(`key-${a.id}`);
+      if (el) el.style.borderColor = '';
+    } catch (e: any) {
+      const el = document.getElementById(`key-${a.id}`);
+      if (el) {
+        el.style.borderColor = '#e53935';
+        el.title = `Key 可能无效：${e?.message || '请求失败'}`;
+      }
+    }
+  }
+}
+checkKeyHealth().catch(() => {});
+
 function themeSeg() {
   const wrap = h('div', { class: 'seg' });
   for (const t of ['light', 'dark', 'auto'] as const) {
@@ -83,23 +104,62 @@ function setCfgStatus(text: string, cls: string) {
 }
 async function exportConfig() {
   const s = await getSettings();
-  if (!(inclKeys as HTMLInputElement).checked) {
+  const withKeys = (inclKeys as HTMLInputElement).checked;
+  if (!withKeys) {
     for (const k of Object.keys(s.sources)) {
       const cur = s.sources[k];
       if (cur) s.sources[k] = { ...cur, apiKey: '' };
     }
   }
   const data = { type: 'threat-intel-helper-config', version: 1, exportedAt: new Date().toISOString(), settings: s };
-  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  let blob: Blob;
+  let ext = 'json';
+  if (withKeys) {
+    // 含 Key 时支持密码加密
+    const pwd = prompt('设置导出密码（留空则不加密）：');
+    if (pwd) {
+      const encoded = await encryptConfig(JSON.stringify(data), pwd);
+      blob = new Blob([encoded], { type: 'application/octet-stream' });
+      ext = 'encrypted.json';
+      setCfgStatus('已导出（含 Key，AES 加密）', 'toast');
+    } else {
+      blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      setCfgStatus('已导出（含 Key，未加密，注意保密）', 'toast');
+    }
+  } else {
+    blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    setCfgStatus('已导出（不含 Key）', 'toast');
+  }
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `threat-intel-config-${new Date().toISOString().slice(0, 10)}.json`;
+  a.download = `xingchuan-ti-config-${new Date().toISOString().slice(0, 10)}.${ext}`;
   document.body.append(a);
   a.click();
   a.remove();
   URL.revokeObjectURL(url);
-  setCfgStatus((inclKeys as HTMLInputElement).checked ? '已导出（含 Key，注意保密）' : '已导出（不含 Key）', 'toast');
+}
+
+// AES-GCM 加密（Web Crypto API）
+async function encryptConfig(plaintext: string, password: string): Promise<string> {
+  const enc = new TextEncoder();
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const keyMaterial = await crypto.subtle.importKey('raw', enc.encode(password), 'PBKDF2', false, ['deriveKey']);
+  const key = await crypto.subtle.deriveKey(
+    { name: 'PBKDF2', salt, iterations: 100000, hash: 'SHA-256' },
+    keyMaterial,
+    { name: 'AES-GCM', length: 256 },
+    false,
+    ['encrypt'],
+  );
+  const encrypted = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, enc.encode(plaintext));
+  // 格式：salt(16) + iv(12) + ciphertext
+  const result = new Uint8Array(salt.length + iv.length + encrypted.byteLength);
+  result.set(salt, 0);
+  result.set(iv, salt.length);
+  result.set(new Uint8Array(encrypted), salt.length + iv.length);
+  return btoa(String.fromCharCode(...result));
 }
 fileInput.addEventListener('change', async () => {
   const f = (fileInput as HTMLInputElement).files?.[0];
