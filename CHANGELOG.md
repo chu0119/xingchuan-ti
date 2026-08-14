@@ -2,6 +2,39 @@
 
 本文件记录星川威胁情报助手的所有重要变更。
 
+## [0.6.2] - 2026-08-14
+
+### 🐛 Bug 修复（P0 级）
+- **typechip 显示错误**：URL/Hash 类型现在正确显示 "URL"/"HASH"，不再显示 "DOMAIN"
+- **verdictEscalated 竞态**：`addHistory` 改为 `await`，确保写入完成后再返回
+- **CSV 导出数据损坏**：实现 `csvEscape` 函数，正确转义逗号/引号/换行
+- **btoa 栈溢出**：分块转 base64，避免大数组 spread 超出调用栈限制
+- **Shodan Key 暴露**：从 URL 查询参数改为 `X-Shodan-Key` header
+
+### 🐛 Bug 修复（P1 级）
+- **暗色主题加载/提示硬编码**：`renderLoading`/`renderHint` 改为接受 theme 参数
+- **URL 强制小写化**：只对 hostname 小写化，保留路径/查询参数大小写
+- **urlscan detailsUrl 错误**：从 API 端点改为 `/result/` 用户界面
+
+### 🐛 Bug 修复（P2 级）
+- **关闭按钮暗色不可见**：改用 CSS 变量 `var(--chipbg)`/`var(--muted)`
+- **设置页 checkKeyHealth 浪费配额**：改为手动触发按钮
+- **内容脚本注入范围**：从 `<all_urls>` 改为 `http://*/*` 和 `https://*/*`
+- **ThreatFox/MalwareBazaar queryStatus 检查不完整**：增加 `illegal_search_term`/`rate_limit` 处理
+- **跳转 tooltip 暗色主题背景硬编码**：改为 CSS 变量 `var(--fg)`/`var(--bg)`
+- **历史记录上限 100 无 UI 提示**：在历史视图底部显示提示
+- **配置导入未验证字段类型/范围**：添加基本验证（weight>0、theme合法等）
+
+### 🐛 Bug 修复（P3 级）
+- **过期缓存未清理**：`getCached` 发现过期时删除
+- **detectAll 中 HASH_RE 全局正则改为局部**：避免 lastIndex 状态问题
+- **IPV4_SUB 无 word boundary**：添加 `\b` 避免匹配版本号
+- **popup 触发方式关闭时显示提示**
+- **导入配置后 skipAutoSave 恢复逻辑完善**
+- **设置页自动保存提示防闪烁**：500ms 防抖 + 2 秒后清除
+- **配额显示区域加 title 属性**：悬停显示完整信息
+- **内容脚本面板跟随系统主题变化实时切换**（auto 模式下）
+
 ## [0.6.1] - 2026-08-14
 
 ### 📝 文档
