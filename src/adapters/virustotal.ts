@@ -3,7 +3,7 @@
 // 判定：last_analysis_stats.malicious 引擎数 → 阈值。
 
 import type { Adapter, IndicatorType } from './types';
-import { fetchJson } from '../lib/http';
+import { fetchJson, HttpError } from '../lib/http';
 
 const BASE = 'https://www.virustotal.com/api/v3';
 
@@ -32,9 +32,28 @@ export const virustotal: Adapter = {
     } else {
       path = `domains/${value}`;
     }
-    const data = await fetchJson(`${BASE}/${path}`, {
-      headers: { 'x-apikey': key, accept: 'application/json' },
-    });
+    let data: any;
+    try {
+      data = await fetchJson(`${BASE}/${path}`, {
+        headers: { 'x-apikey': key, accept: 'application/json' },
+      });
+    } catch (e) {
+      if (e instanceof HttpError && e.status === 404) {
+        return {
+          source: 'virustotal',
+          sourceName: 'VirusTotal',
+          verdict: 'clean',
+          score: 0,
+          summary: 'VirusTotal 未收录该指标',
+          tags: [],
+          detailsUrl: type === 'hash'
+            ? `https://www.virustotal.com/gui/file/${value}`
+            : gui(type, value),
+          queriedAt: Date.now(),
+        };
+      }
+      throw e;
+    }
     const attr = data?.data?.attributes ?? {};
     const stats = attr.last_analysis_stats ?? {};
     const malicious = stats.malicious ?? 0;

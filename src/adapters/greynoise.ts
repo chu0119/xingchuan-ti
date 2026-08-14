@@ -2,7 +2,7 @@
 // 文档：https://docs.greynoise.io/docs/using-the-greynoise-community-api （Community API，免费 ~50次/周）
 
 import type { Adapter } from './types';
-import { fetchJson } from '../lib/http';
+import { fetchJson, HttpError } from '../lib/http';
 
 export const greynoise: Adapter = {
   id: 'greynoise',
@@ -14,9 +14,26 @@ export const greynoise: Adapter = {
     if (type !== 'ip') throw new Error('GreyNoise 仅支持 IP');
     const headers: Record<string, string> = { Accept: 'application/json' };
     if (key) headers['key'] = key;
-    const data = await fetchJson(`https://api.greynoise.io/v3/community/ip?q=${encodeURIComponent(value)}`, {
-      headers,
-    });
+    let data: any;
+    try {
+      data = await fetchJson(`https://api.greynoise.io/v3/community/ip?q=${encodeURIComponent(value)}`, {
+        headers,
+      });
+    } catch (e) {
+      if (e instanceof HttpError && e.status === 404) {
+        return {
+          source: 'greynoise',
+          sourceName: 'GreyNoise',
+          verdict: 'unknown',
+          score: null,
+          summary: 'GreyNoise 未收录该 IP',
+          tags: [],
+          detailsUrl: `https://viz.greynoise.io/ip/${value}`,
+          queriedAt: Date.now(),
+        };
+      }
+      throw e;
+    }
 
     const cls = data?.classification; // malicious | benign | unknown
     const verdict = cls === 'malicious' ? 'malicious' : cls === 'benign' ? 'clean' : 'unknown';

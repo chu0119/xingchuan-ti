@@ -145,8 +145,19 @@ export default defineContentScript({
       const theme0 = resolvedTheme((await getSettings()).theme);
       renderLoading(rootEl, '正在查询多个情报源…', theme0, closePanel);
       attachDrag();
-      const res = await queryBackground({ kind: 'query', type: det.type, value: det.value, nocache });
+      let res;
+      try {
+        res = await queryBackground({ kind: 'query', type: det.type, value: det.value, nocache });
+      } catch (e: any) {
+        if (!host) return;
+        renderHint(rootEl, '查询失败：' + (e?.message || '网络异常'), theme0, closePanel);
+        return;
+      }
       if (!host) return;
+      if (!res || res.ok === undefined) {
+        renderHint(rootEl, '查询失败：后台服务异常，请刷新页面', theme0, closePanel);
+        return;
+      }
       if (res.ok) {
         const theme = resolvedTheme((await getSettings()).theme);
         const opts: RenderOpts = {

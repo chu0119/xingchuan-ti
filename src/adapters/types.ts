@@ -65,4 +65,6 @@ export interface Settings {
   theme: 'light' | 'dark' | 'auto';
   /** 恶性 verdict 桌面通知 */
   notifyOnMalicious: boolean;
+  /** 允许清单：用户标记为已知良性的 IP/域名，查询时跳过 */
+  allowlist: string[];
 }

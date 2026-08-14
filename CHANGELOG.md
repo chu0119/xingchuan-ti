@@ -9,6 +9,27 @@
 - README 许可证章节更新：加双重许可说明
 - 隐私政策更新许可证声明
 
+## [0.7.0] - 2026-08-14
+
+### 🐛 Bug 修复（H 级 · 严重）
+- **H1 消息层零容错**：background `.then` 补 `.catch`，popup/content 每次 `queryBackground` 都判空/判异常，异常不再卡在加载态
+- **H2 批量查询不可取消**：引入 `batchSeq` 互斥令牌，新批次启动自动中止旧循环；每轮迭代 + 响应后双重检查令牌
+- **H3 rateLimit 读写竞态**：`tryConsume` 改用 `withLock` 写入锁防并发覆盖；查询失败时 `refund` 退配额（Key 无效/断网不浪费每日 500 次）
+
+### 🐛 Bug 修复（M 级 · 中）
+- **M1 IPv6 URL 不识别**：`URL_RE` 排除 `[]` 字符 → IPv6 URL（`http://[2001:db8::1]/path`）正确识别；`findIPv6` 分隔符补 `.`/引号避免截断
+- **M1 Defanged IOC 还原**：新增 `defang()` 预归一，`evil[.]com` → `evil.com`、`hxxp://` → `http://`；`detectIndicator` 和 `detectAll` 都先走 defang
+- **M3 缓存命中丢失升级告警字段**：cache-hit 路径现在也计算并返回 `verdictEscalated`/`lastLabel`
+- **M4 VT/GreyNoise 404 优雅处理**：未收录指标（404）返回 `clean`/`unknown`（“未收录该指标”），不再显示红色错误行
+
+### ✨ 新增功能
+- **F2 JSON/Markdown 导出 + CSV 补列**：批量查询结果支持三种格式导出（CSV 加 BOM + 时间戳、JSON 结构化、Markdown 报告）；下拉菜单选择格式
+- **F3 允许清单（误报抑制）**：设置页新增“允许清单”textarea，每行一个 IP/域名；命中时跳过查询，直接标记为“已标记良性”
+
+### 📝 文档修正
+- README 隐私声明修正：缓存存 `session`（关浏览器即清），历史存 `local`（仅本地，用户可随时清空）
+- README 对比表许可证修正：MIT → GPLv3
+
 ## [0.6.3] - 2026-08-14
 
 ### 🐛 Bug 修复（第二轮全面审计，P1×3 + P2×5 + P3×12）

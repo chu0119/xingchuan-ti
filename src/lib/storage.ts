@@ -22,6 +22,7 @@ export const DEFAULT_SETTINGS: Settings = {
   cacheTtlMin: 10,
   theme: 'auto',
   notifyOnMalicious: true,
+  allowlist: [],
 };
 
 export async function getSettings(): Promise<Settings> {
@@ -41,5 +42,6 @@ function mergeDefaults(stored?: Partial<Settings>): Settings {
     cacheTtlMin: stored.cacheTtlMin ?? DEFAULT_SETTINGS.cacheTtlMin,
     theme: (stored.theme as Settings['theme']) ?? DEFAULT_SETTINGS.theme,
     notifyOnMalicious: stored.notifyOnMalicious ?? DEFAULT_SETTINGS.notifyOnMalicious,
+    allowlist: Array.isArray(stored.allowlist) ? stored.allowlist : [],
   };
 }

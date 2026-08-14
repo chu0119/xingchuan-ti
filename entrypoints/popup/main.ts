@@ -6,7 +6,7 @@ import { getSettings, saveSettings } from '../../src/lib/storage';
 import { clearHistory, getHistory } from '../../src/lib/history';
 import type { HistoryItem } from '../../src/lib/history';
 import { ADAPTERS } from '../../src/adapters';
-import { getUsage } from '../../src/lib/rateLimit';
+import { getUsageToday } from '../../src/lib/rateLimit';
 import { queryBackground } from '../../src/lib/messaging';
 import type { QueryResponse } from '../../src/lib/messaging';
 import type { AggregateResult } from '../../src/adapters/types';
@@ -44,8 +44,13 @@ body{margin:0;width:400px;background:var(--bg);color:var(--fg);font:13px/1.55 -a
 .batch-stat.mal{background:rgba(229,57,53,.12);color:#e53935;}
 .batch-stat.susp{background:rgba(251,140,0,.12);color:#fb8c00;}
 .batch-stat.clean{background:rgba(67,160,71,.12);color:#43a047;}
+.batch-export-wrap{position:relative;}
 .batch-export{background:var(--chipbg);color:var(--fg);border:1px solid var(--border);border-radius:7px;padding:5px 12px;font-size:11px;cursor:pointer;}
 .batch-export:hover{background:var(--hover);}
+.batch-export-dd{display:none;position:absolute;right:0;top:100%;margin-top:4px;background:var(--bg);border:1px solid var(--border);border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,.12);z-index:10;min-width:120px;}
+.batch-export-wrap:hover .batch-export-dd{display:block;}
+.batch-export-opt{padding:7px 12px;font-size:12px;color:var(--fg);cursor:pointer;white-space:nowrap;}
+.batch-export-opt:hover{background:var(--softbg);}
 .batch-list{max-height:420px;overflow:auto;}
 .batch-row{display:flex;align-items:center;gap:8px;padding:7px 9px;border-radius:8px;cursor:pointer;border-bottom:1px solid var(--border2);}
 .batch-row:hover{background:var(--softbg);}
@@ -166,8 +171,19 @@ async function queryAndShow(list: Detected[], index: number, nocache = false) {
   const det = list[index]!;
   const seq = ++querySeq;
   renderLoading(out, '正在查询多个情报源…', resolvedTheme(settings.theme));
-  const res = await queryBackground({ kind: 'query', type: det.type, value: det.value, nocache });
+  let res;
+  try {
+    res = await queryBackground({ kind: 'query', type: det.type, value: det.value, nocache });
+  } catch (e: any) {
+    if (seq !== querySeq) return;
+    ppHint('查询失败：' + (e?.message || '网络异常，请检查连接'));
+    return;
+  }
   if (seq !== querySeq) return; // 已有更新的查询，丢弃本次响应
+  if (!res || res.ok === undefined) {
+    ppHint('查询失败：后台服务异常，请刷新页面重试');
+    return;
+  }
   if (res.ok) {
     last = { res, list, index };
     renderResults(out, res, makeOpts(res, list, index));
@@ -195,22 +211,32 @@ function doQuery(nocache = false) {
 }
 
 // ===== 批量查询 =====
+let batchSeq = 0; // 批次令牌：新批次启动时旧批次自动中止
 async function batchQuery(list: Detected[], nocache = false) {
   last = null; // 清空单查询缓存，防止主题切换时批量视图被旧结果覆盖
   querySeq++;  // 使进行中的单查询响应过期
+  const myBatch = ++batchSeq; // 本批次令牌
   ppHint(`正在批量查询 ${list.length} 个指标…`);
   const results: { det: Detected; agg: AggregateResult; err?: string }[] = [];
   let done = 0;
   for (const det of list) {
-    const res = await queryBackground({ kind: 'query', type: det.type, value: det.value, nocache });
-    if (res.ok) {
+    if (myBatch !== batchSeq) return; // 已有新批次，中止旧循环
+    let res;
+    try {
+      res = await queryBackground({ kind: 'query', type: det.type, value: det.value, nocache });
+    } catch {
+      res = { ok: false, error: '网络异常' };
+    }
+    if (myBatch !== batchSeq) return; // 响应回来后再检查一次
+    if (res?.ok && res.aggregate) {
       results.push({ det, agg: res.aggregate });
     } else {
-      results.push({ det, agg: { score: null, label: 'unknown', contributors: 0, flagCount: 0, cleanCount: 0 }, err: res.error });
+      results.push({ det, agg: { score: null, label: 'unknown', contributors: 0, flagCount: 0, cleanCount: 0 }, err: (res as any)?.error || '查询失败' });
     }
     done++;
     ppHint(`正在批量查询 ${list.length} 个指标… (${done}/${list.length})`);
   }
+  if (myBatch !== batchSeq) return; // 最终检查
   renderBatchResults(results);
   renderQuota();
 }
@@ -241,18 +267,70 @@ function renderBatchResults(results: { det: Detected; agg: AggregateResult; err?
     return row;
   });
 
-  const exportBtn = h('button', {
-    class: 'batch-export',
-    text: '导出 CSV',
-    onClick: () => exportBatchCSV(results),
-  });
+  const exportMenu = h('div', { class: 'batch-export-wrap' }, [
+    h('button', { class: 'batch-export', text: '导出 ▾' }),
+    h('div', { class: 'batch-export-dd' }, [
+      h('div', { class: 'batch-export-opt', text: '导出 CSV', onClick: () => exportBatchCSV(results) }),
+      h('div', { class: 'batch-export-opt', text: '导出 JSON', onClick: () => exportBatchJSON(results) }),
+      h('div', { class: 'batch-export-opt', text: '导出 Markdown', onClick: () => exportBatchMD(results) }),
+    ]),
+  ]);
 
   out.replaceChildren(
     h('div', { class: 'batch-wrap' }, [
-      h('div', { class: 'batch-head' }, [summary, exportBtn]),
+      h('div', { class: 'batch-head' }, [summary, exportMenu]),
       h('div', { class: 'batch-list' }, rows),
     ]),
   );
+}
+
+function exportBatchJSON(results: { det: Detected; agg: AggregateResult; err?: string }[]) {
+  const payload = {
+    type: 'threat-intel-helper-export',
+    version: '0.7.0',
+    exportedAt: new Date().toISOString(),
+    results: results.map(r => ({
+      type: r.det.type,
+      value: r.det.value,
+      label: r.err ? 'error' : r.agg.label,
+      score: r.agg.score,
+      flagCount: r.agg.flagCount,
+      cleanCount: r.agg.cleanCount,
+      error: r.err || null,
+    })),
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+  downloadBlob(blob, `xingchuan-ti-batch-${ts()}.json`);
+}
+
+function exportBatchMD(results: { det: Detected; agg: AggregateResult; err?: string }[]) {
+  const rows = results.map(r => {
+    const v = r.err ? 'error' : r.agg.label;
+    const sc = r.err ? '!' : r.agg.score == null ? '—' : String(r.agg.score);
+    return `| ${r.det.type} | \`${r.det.value}\` | ${v} | ${sc} | ${r.err || ''} |`;
+  });
+  const md = [
+    '# 星川威胁情报助手 · 批量查询结果',
+    `> 导出时间：${new Date().toLocaleString()}`,
+    '',
+    '| 类型 | 值 | 判定 | 分数 | 错误 |',
+    '|---|---|---|---|---|',
+    ...rows,
+    '',
+    `恶意 ${results.filter(r => r.agg.label === 'malicious').length} · 可疑 ${results.filter(r => r.agg.label === 'suspicious').length} · 干净 ${results.filter(r => r.agg.label === 'clean').length}`,
+  ].join('\n');
+  const blob = new Blob([md], { type: 'text/markdown;charset=utf-8' });
+  downloadBlob(blob, `xingchuan-ti-batch-${ts()}.md`);
+}
+
+function ts() { return new Date().toISOString().slice(0, 19).replace(/[T:]/g, '-'); }
+function downloadBlob(blob: Blob, name: string) {
+  const url = URL.createObjectURL(blob);
+  const a = h('a', { href: url, download: name }) as HTMLAnchorElement;
+  document.body.append(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
 }
 
 function csvEscape(field: string | number): string {
@@ -386,15 +464,8 @@ function exportHistoryCSV(list: HistoryItem[]) {
   const body = list.map(it =>
     [it.type, it.value, it.label ?? '', it.score ?? '', new Date(it.ts).toISOString()].map(csvEscape).join(',')
   ).join('\n');
-  const blob = new Blob(['\uFEFF' + header + body], { type: 'text/csv;charset=utf-8' }); // BOM：防止 Excel 打开中文乱码
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `xingchuan-ti-history-${new Date().toISOString().slice(0, 10)}.csv`;
-  document.body.append(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
+  const blob = new Blob(['\uFEFF' + header + body], { type: 'text/csv;charset=utf-8' });
+  downloadBlob(blob, `xingchuan-ti-history-${ts()}.csv`);
 }
 
   // ===== 初始化 =====
@@ -428,7 +499,7 @@ async function renderQuota() {
   for (const a of ADAPTERS) {
     const s = settings.sources[a.id];
     if (!s?.enabled || !s.apiKey) continue;
-    const usage = await getUsage(a.id);
+    const usage = await getUsageToday(a.id);
     const limit = a.rateLimit.perDay;
     if (limit) {
       items.push(`${a.name}: ${usage.today}/${limit}`);

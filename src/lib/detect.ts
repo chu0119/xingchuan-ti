@@ -35,7 +35,7 @@ export function isIPv6(s: string): boolean {
 
 /** 在文本里找首个 IPv6 token */
 function findIPv6(raw: string): string | null {
-  for (const tok of raw.split(/[\s,;|()\[\]]+/)) {
+  for (const tok of raw.split(/[\s,;|()\[\]"'.]+/)) {
     const t = tok.trim();
     if (t && isIPv6(t)) return t;
   }
@@ -54,9 +54,20 @@ function toHost(raw: string): string {
   return s;
 }
 
+/** Defanged IOC 还原：evil[.]com → evil.com、1.2.3[.]4 → 1.2.3.4、hxxp:// → http:// */
+export function defang(raw: string): string {
+  return raw
+    .replace(/\[\.\]/g, '.')
+    .replace(/\[:\]/g, ':')
+    .replace(/\(\.\)/g, '.')
+    .replace(/\(\:\)/g, ':')
+    .replace(/hxxp:\/\//gi, 'http://')
+    .replace(/hxxps:\/\//gi, 'https://');
+}
+
 export function detectIndicator(raw: string): Detected | null {
   if (!raw) return null;
-  const trimmed = raw.trim();
+  const trimmed = defang(raw.trim()); // 还原 defanged 写法
 
   // 优先识别 URL（含协议/路径）
   const URL_RE = /^https?:\/\/[^\s,;|()\[\]"'<>]+$/i;
@@ -97,12 +108,13 @@ export function detectIndicator(raw: string): Detected | null {
 /** 选中文本里所有可识别的指标（面板"下一个"切换用）。 */
 export function detectAll(raw: string): Detected[] {
   if (!raw) return [];
+  const source = defang(raw); // 还原 defanged 写法后再提取
   const out: Detected[] = [];
   const seen = new Set<string>();
 
   // 1. 提取 URL（含协议/路径），去重后作为 URL 类型（仅 hostname 小写，保留路径大小写）
   const URL_RE = /https?:\/\/[^\s,;|()\[\]"'<>]+/gi;
-  for (const m of raw.matchAll(URL_RE)) {
+  for (const m of source.matchAll(URL_RE)) {
     let u = m[0];
     try {
       const parsed = new URL(u);
@@ -118,7 +130,7 @@ export function detectAll(raw: string): Detected[] {
   }
 
   // 2. 提取 IPv4
-  for (const m of raw.matchAll(new RegExp(IPV4_SUB.source, 'g'))) {
+  for (const m of source.matchAll(new RegExp(IPV4_SUB.source, "g"))) {
     const v = m[0];
     if (!seen.has('ip:' + v)) {
       seen.add('ip:' + v);
@@ -127,7 +139,7 @@ export function detectAll(raw: string): Detected[] {
   }
 
   // 3. 提取 IPv6
-  for (const tok of raw.split(/[\s,;|()\[\]]+/)) {
+  for (const tok of source.split(/[\s,;|()\[\]]+/)) {
     const v = tok.trim().toLowerCase();
     if (v && isIPv6(v) && !seen.has('ip:' + v)) {
       seen.add('ip:' + v);
@@ -136,7 +148,7 @@ export function detectAll(raw: string): Detected[] {
   }
 
   // 4. 提取域名（排除已被 URL 覆盖的）
-  for (const m of raw.matchAll(new RegExp(DOMAIN_SUB.source, 'g'))) {
+  for (const m of source.matchAll(new RegExp(DOMAIN_SUB.source, "g"))) {
     const v = m[0].toLowerCase();
     const dominated = out.some(d => d.type === 'url' && d.value.includes(v));
     if (!seen.has('dom:' + v) && !IPV4.test(v) && !dominated) {
@@ -147,7 +159,7 @@ export function detectAll(raw: string): Detected[] {
 
   // 5. 提取文件哈希（MD5/SHA1/SHA256）——每次创建新正则避免 lastIndex 状态问题
   const hashRe = /\b[a-fA-F0-9]{64}\b|\b[a-fA-F0-9]{40}\b|\b[a-fA-F0-9]{32}\b/g;
-  for (const m of raw.matchAll(hashRe)) {
+  for (const m of source.matchAll(hashRe)) {
     const v = m[0].toLowerCase();
     if (!seen.has('hash:' + v)) {
       seen.add('hash:' + v);

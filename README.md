@@ -95,7 +95,7 @@
 ### 🔒 安全优先
 
 - API Key 仅存本地 `chrome.storage.local`，不上传、不遥测、不外发
-- 查询记录仅存 `chrome.storage.session`，关闭浏览器即清
+- 查询缓存仅存 `chrome.storage.session`（关闭浏览器即清）；最近查询历史存 `chrome.storage.local`（仅本地，用户可随时清空）
 - host_permissions 最小权限（精确到 API 路径）
 - Content Security Policy 声明，防止 XSS
 - 配置导出支持 AES-GCM 加密
@@ -241,7 +241,7 @@ npm run screenshots     # 拍摄 README 截图
 | URL / 哈希识别 | ✅ MD5/SHA1/SHA256 | ❌ | ✅ 仅哈希 |
 | 亮/暗主题 | ✅ 跟随系统 | ❌ | ❌ |
 | 配置导入导出 | ✅ AES 加密 | ❌ | ❌ |
-| 开源可审计 | ✅ MIT | ❌ | ❌ |
+| 开源可审计 | ✅ GPLv3 | ❌ | ❌ |
 | 零遥测 | ✅ | ❌ | ❌ |
 | Key 健康检查 | ✅ | ❌ | ❌ |
 | verdict 升级告警 | ✅ | ❌ | ❌ |

@@ -313,12 +313,25 @@ wrap.append(
     ]),
   ]),
 
+  // 允许清单
+  h('h2', {}, [h('span', { class: 'n', text: '6' }), '允许清单（误报抑制）']),
+  h('div', { class: 'card' }, [
+    h('div', { class: 'muted', text: '每行一个 IP 或域名。命中时跳过查询，直接标记为“已标记良性”。' }),
+    h('textarea', {
+      id: 'allowlist',
+      class: 'al-textarea',
+      placeholder: '例：\n10.0.0.1\ninternal.corp.com\ncdn.example.com',
+      value: settings.allowlist.join('\n'),
+      style: { width: '100%', minHeight: '80px', marginTop: '8px', padding: '8px', border: '1px solid var(--border)', borderRadius: '8px', background: 'var(--bg)', color: 'var(--fg)', fontFamily: 'ui-monospace,Menlo,Consolas', fontSize: '12px', resize: 'vertical' },
+    }),
+  ]),
+
   // 跳转说明
-  h('h2', {}, [h('span', { class: 'n', text: '6' }), '一键跳转平台']),
+  h('h2', {}, [h('span', { class: 'n', text: '7' }), '一键跳转平台']),
   h('div', { class: 'card' }, [h('div', { class: 'muted', text: JUMP_ONLY_NOTE })]),
 
   // 配置导入 / 导出
-  h('h2', {}, [h('span', { class: 'n', text: '7' }), '配置导入 / 导出']),
+  h('h2', {}, [h('span', { class: 'n', text: '8' }), '配置导入 / 导出']),
   h('div', { class: 'card' }, [
     h('div', { class: 'row' }, [
       h('label', { class: 'k', text: '导出含 Key' }),
@@ -380,6 +393,8 @@ async function saveAll() {
   }
   s.cacheTtlMin = parseInt((document.getElementById('ttl') as HTMLInputElement).value) || 0;
   s.notifyOnMalicious = (document.getElementById('notify-malicious') as HTMLInputElement).checked;
+  s.allowlist = ((document.getElementById('allowlist') as HTMLTextAreaElement | null)?.value || '')
+    .split('\n').map(l => l.trim()).filter(Boolean);
   const checked = document.querySelector('input[name="theme"]:checked') as HTMLInputElement;
   if (checked) s.theme = checked.value as Settings['theme'];
   await saveSettings(s);

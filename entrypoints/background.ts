@@ -6,7 +6,7 @@ import { ADAPTERS } from '../src/adapters';
 import { extractHost } from '../src/lib/http';
 import { getSettings } from '../src/lib/storage';
 import { aggregate } from '../src/lib/score';
-import { tryConsume } from '../src/lib/rateLimit';
+import { tryConsume, refund } from '../src/lib/rateLimit';
 import { getCached, setCached } from '../src/lib/cache';
 import { detectIndicator } from '../src/lib/detect';
 import { addHistory, getHistory } from '../src/lib/history';
@@ -39,7 +39,26 @@ async function runQuery(
 
   if (!nocache) {
     const cached = await getCached(type, value);
-    if (cached) return { ok: true, type, value, results: cached.results, aggregate: cached.aggregate };
+    if (cached) {
+      const hist = await getHistory();
+      const prev = hist.find(h => h.type === type && h.value === value);
+      const prevLabel = prev?.label;
+      const verdictEscalated = prevLabel === 'clean' && (cached.aggregate.label === 'suspicious' || cached.aggregate.label === 'malicious');
+      return { ok: true, type, value, results: cached.results, aggregate: cached.aggregate, verdictEscalated, lastLabel: prevLabel };
+    }
+  }
+
+  // 允许清单：命中时跳过查询，直接标记为"已标记良性"
+  if (settings.allowlist.includes(value)) {
+    return {
+      ok: true, type, value,
+      results: [{
+        source: 'allowlist', sourceName: '允许清单', verdict: 'clean', score: 0,
+        summary: '已标记为已知良性', tags: ['allowlist'],
+        detailsUrl: '', queriedAt: Date.now(),
+      }],
+      aggregate: { score: 0, label: 'clean', contributors: 1, flagCount: 0, cleanCount: 1 },
+    };
   }
 
   // URL 类型：从 URL 提取域名后查询各源（评分逻辑与域名相同）
@@ -67,6 +86,8 @@ async function runQuery(
         results.push(await a.query(queryType, queryValue, s.apiKey));
       } catch (e: any) {
         results.push(errorResult(a.id, a.name, e?.message || String(e)));
+        // 查询失败退款（Key 无效/网络超时不烧配额）
+        refund(a.id).catch(() => {});
       }
     }),
   );
@@ -145,9 +166,9 @@ export default defineBackground(() => {
 
   chrome.runtime.onMessage.addListener((msg, _src, sendResponse) => {
     if (msg?.kind === 'query') {
-      runQuery(msg.type as IndicatorType, msg.value as string, Boolean(msg.nocache)).then(r =>
-        sendResponse(r),
-      );
+      runQuery(msg.type as IndicatorType, msg.value as string, Boolean(msg.nocache))
+        .then(r => sendResponse(r))
+        .catch(e => sendResponse({ ok: false, error: String(e?.message || e) }));
       return true;
     }
     return false;
