@@ -1,0 +1,56 @@
+# Edge Add-ons 自动发布工作流
+# 触发：在 GitHub 创建 Release 时自动上传到 Edge 商店并提交审核
+#
+# 需要在仓库 Settings → Secrets and variables → Actions 添加：
+#   EDGE_PRODUCT_ID - Partner Center 产品 ID（URL 里的那串）
+#   EDGE_API_TOKEN  - Partner Center API Primary access token
+#
+# 发布流程：改版本号 → git push → 创建 Release → 自动上架 Edge 商店
+name: Publish to Edge Add-ons
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - run: npm ci
+      - run: npm run build
+      - run: npm run zip
+
+      - name: Upload to Edge Add-ons
+        run: |
+          ZIP_FILE=$(ls .output/*.zip)
+          echo "Uploading: $ZIP_FILE"
+
+          # 提交新版本包
+          curl -s -X POST \
+            "https://api.partnercenter.microsoft.com/edge/v1/products/${EDGE_PRODUCT_ID}/submissions/draft/package" \
+            -H "Authorization: ApiKey ${EDGE_API_TOKEN}" \
+            -F "file=@${ZIP_FILE}" \
+            -o upload_response.json
+
+          echo "Upload response:"
+          cat upload_response.json
+
+          # 提交审核
+          curl -s -X POST \
+            "https://api.partnercenter.microsoft.com/edge/v1/products/${EDGE_PRODUCT_ID}/submissions/draft/commit" \
+            -H "Authorization: ApiKey ${EDGE_API_TOKEN}" \
+            -o commit_response.json
+
+          echo "Commit response:"
+          cat commit_response.json
+          echo ""
+          echo "✅ Submitted to Edge Add-ons for review!"
+        env:
+          EDGE_PRODUCT_ID: ${{ secrets.EDGE_PRODUCT_ID }}
+          EDGE_API_TOKEN: ${{ secrets.EDGE_API_TOKEN }}
