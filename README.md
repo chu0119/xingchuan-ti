@@ -9,10 +9,10 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/chu0119/xingchuan-ti/releases"><img src="https://img.shields.io/badge/version-0.6.3-blue?style=flat-square" alt="version"></a>
+  <a href="https://github.com/chu0119/xingchuan-ti/releases"><img src="https://img.shields.io/badge/version-0.6.5-blue?style=flat-square" alt="version"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPLv3-green?style=flat-square" alt="license"></a>
   <a href="#"><img src="https://img.shields.io/badge/tests-passing-brightgreen?style=flat-square" alt="tests"></a>
-  <a href="#"><img src="https://img.shields.io/badge/Chrome-Manifest%20V3-yellow?style=flat-square" alt="chrome"></a>
+  <a href="https://microsoftedge.microsoft.com/addons/detail/%E6%98%9F%E5%B7%9D%E5%A8%81%E8%83%81%E6%83%85%E6%8A%A5%E5%8A%A9%E6%89%8B/bkbnepnebjjecbmdbliehglcknmenoal"><img src="https://img.shields.io/badge/Edge-Add--ons-blue?style=flat-square&logo=microsoftedge" alt="edge"></a>
   <a href="#"><img src="https://img.shields.io/badge/TypeScript-5.x-blue?style=flat-square" alt="typescript"></a>
   <a href="https://github.com/chu0119/xingchuan-ti/releases"><img src="https://img.shields.io/github/downloads/chu0119/xingchuan-ti/total?style=flat-square" alt="downloads"></a>
 </p>
@@ -100,7 +100,7 @@
 - Content Security Policy 声明，防止 XSS
 - 配置导出支持 AES-GCM 加密
 - API Key 健康检查（手动触发，检测无效 Key 标红提醒）
-- 全部源码开源可审计，MIT 许可证
+- 全部源码开源可审计，GPLv3 许可证
 
 ---
 
@@ -129,9 +129,17 @@
 
 ### 安装
 
+**方式一：Edge 商店安装（推荐）**
+
+<a href="https://microsoftedge.microsoft.com/addons/detail/%E6%98%9F%E5%B7%9D%E5%A8%81%E8%83%81%E6%83%85%E6%8A%A5%E5%8A%A9%E6%89%8B/bkbnepnebjjecbmdbliehglcknmenoal">
+  <img src="https://img.shields.io/badge/Edge_商店安装-0078D7?style=for-the-badge&logo=microsoftedge&logoColor=white" alt="Edge Add-on">
+</a>
+
+**方式二：手动加载（Chrome / Edge / 其他 Chromium 浏览器）**
+
 1. 从 [Releases](https://github.com/chu0119/xingchuan-ti/releases) 下载最新 `xingchuan-ti-x.x.x-chrome.zip`
 2. 解压到任意目录
-3. Chrome 打开 `chrome://extensions` → 开启「开发者模式」→「加载已解压的扩展程序」→ 选择解压后的目录
+3. 打开 `chrome://extensions`（Chrome）或 `edge://extensions`（Edge）→ 开启「开发者模式」→「加载已解压的扩展程序」→ 选择解压后的目录
 
 ### 配置
 
