@@ -100,10 +100,17 @@ export function detectAll(raw: string): Detected[] {
   const out: Detected[] = [];
   const seen = new Set<string>();
 
-  // 1. 提取 URL（含协议/路径），去重后作为 URL 类型
+  // 1. 提取 URL（含协议/路径），去重后作为 URL 类型（仅 hostname 小写，保留路径大小写）
   const URL_RE = /https?:\/\/[^\s,;|()\[\]"'<>]+/gi;
   for (const m of raw.matchAll(URL_RE)) {
-    const u = m[0].toLowerCase();
+    let u = m[0];
+    try {
+      const parsed = new URL(u);
+      parsed.hostname = parsed.hostname.toLowerCase();
+      u = parsed.toString();
+    } catch {
+      u = u.toLowerCase();
+    }
     if (!seen.has('url:' + u)) {
       seen.add('url:' + u);
       out.push({ type: 'url', value: u });

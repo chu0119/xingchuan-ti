@@ -34,7 +34,7 @@ body{margin:0;width:400px;background:var(--bg);color:var(--fg);font:13px/1.55 -a
 .pp-in:focus{border-color:var(--accent);}
 .pp-go{border:none;background:var(--btn);color:#fff;border-radius:8px;padding:0 16px;font-size:13px;font-weight:600;cursor:pointer;}
 .pp-go:hover{filter:brightness(1.06);}
-.pp-out{max-height:560px;overflow:auto;}
+.pp-out{max-height:430px;overflow:auto;}
 .pp-foot{display:flex;align-items:center;padding:9px 12px;border-top:1px solid var(--border2);font-size:11px;color:var(--muted);background:var(--softbg);}
 .pp-hint{padding:26px 18px;text-align:center;color:var(--muted);font-size:12px;line-height:1.8;white-space:pre-line;}
 .batch-wrap{padding:8px;}
@@ -93,9 +93,9 @@ const out = h('div', { class: 'pp-out' });
 const input = h('textarea', {
   class: 'pp-in',
   placeholder: '输入 IP / 域名 / URL / 哈希（多行自动批量查询）',
-  spellcheck: 'false',
+  spellcheck: false,
   rows: '1',
-  style: 'resize:none;overflow:hidden;height:auto;',
+  style: { resize: 'none', overflow: 'hidden', height: 'auto' },
 }) as HTMLTextAreaElement;
 const goBtn = h('button', { class: 'pp-go', text: '查询' });
 const themeBtn = h('button', { class: 'pp-ibtn', title: '切换亮/暗主题' });
@@ -145,7 +145,9 @@ function showView(v: 'main' | 'history') {
 
 // ===== 查询 =====
 let last: { res: QueryResponse; list: Detected[]; index: number } | null = null;
-function makeOpts(list: Detected[], index: number): RenderOpts {
+// 请求序号：丢弃过期响应，防止快速连续查询时旧结果覆盖新结果
+let querySeq = 0;
+function makeOpts(res: QueryResponse, list: Detected[], index: number): RenderOpts {
   const det = list[index]!;
   return {
     theme: resolvedTheme(settings.theme),
@@ -156,18 +158,23 @@ function makeOpts(list: Detected[], index: number): RenderOpts {
     onCopy: () => copyText(det.value),
     onRefresh: () => queryAndShow(list, index, true),
     onOpenSettings: () => chrome.runtime.openOptionsPage(),
+    verdictEscalated: res.verdictEscalated,
+    lastLabel: res.lastLabel,
   };
 }
 async function queryAndShow(list: Detected[], index: number, nocache = false) {
   const det = list[index]!;
-  renderLoading(out);
+  const seq = ++querySeq;
+  renderLoading(out, '正在查询多个情报源…', resolvedTheme(settings.theme));
   const res = await queryBackground({ kind: 'query', type: det.type, value: det.value, nocache });
+  if (seq !== querySeq) return; // 已有更新的查询，丢弃本次响应
   if (res.ok) {
     last = { res, list, index };
-    renderResults(out, res, makeOpts(list, index));
+    renderResults(out, res, makeOpts(res, list, index));
   } else {
     ppHint(res.error || '查询失败，请到设置页检查 API Key');
   }
+  renderQuota();
 }
 function ppHint(text: string) {
   out.replaceChildren(h('div', { class: 'pp-hint', text }));
@@ -189,6 +196,8 @@ function doQuery(nocache = false) {
 
 // ===== 批量查询 =====
 async function batchQuery(list: Detected[], nocache = false) {
+  last = null; // 清空单查询缓存，防止主题切换时批量视图被旧结果覆盖
+  querySeq++;  // 使进行中的单查询响应过期
   ppHint(`正在批量查询 ${list.length} 个指标…`);
   const results: { det: Detected; agg: AggregateResult; err?: string }[] = [];
   let done = 0;
@@ -203,6 +212,7 @@ async function batchQuery(list: Detected[], nocache = false) {
     ppHint(`正在批量查询 ${list.length} 个指标… (${done}/${list.length})`);
   }
   renderBatchResults(results);
+  renderQuota();
 }
 
 function renderBatchResults(results: { det: Detected; agg: AggregateResult; err?: string }[]) {
@@ -260,7 +270,7 @@ function exportBatchCSV(results: { det: Detected; agg: AggregateResult; err?: st
     const sc = r.agg.score ?? '';
     return [r.det.type, r.det.value, v, sc, r.err || ''].map(csvEscape).join(',');
   }).join('\n');
-  const blob = new Blob([header + body], { type: 'text/csv;charset=utf-8' });
+  const blob = new Blob(['\uFEFF' + header + body], { type: 'text/csv;charset=utf-8' }); // BOM：防止 Excel 打开中文乱码
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
@@ -273,6 +283,7 @@ function exportBatchCSV(results: { det: Detected; agg: AggregateResult; err?: st
 
 goBtn.addEventListener('click', () => doQuery(false));
 input.addEventListener('keydown', e => {
+  if (e.isComposing) return; // 输入法组词中的 Enter 不触发查询
   if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); doQuery(false); }
   if (e.key === 'Enter' && e.shiftKey) { /* shift+enter 换行 */ }
 });
@@ -283,7 +294,7 @@ themeBtn.addEventListener('click', async () => {
   await saveSettings(settings);
   document.documentElement.dataset.theme = resolvedTheme(settings.theme);
   syncThemeIcon();
-  if (last) renderResults(out, last.res, makeOpts(last.list, last.index));
+  if (last) renderResults(out, last.res, makeOpts(last.res, last.list, last.index));
 });
 syncThemeIcon();
 
@@ -292,9 +303,11 @@ histBtn.addEventListener('click', () => { renderHistory(); showView('history'); 
 // 筛选器状态
 let histFilter = { verdict: '', type: '', search: '' };
 
-async function renderHistory() {
-  const all = await getHistory();
-  // 筛选
+// 历史筛选栏只建一次（避免每敲一个字符重建 DOM 导致焦点丢失、输入法被打断）
+let histFilterBuilt = false;
+let histListContainer: HTMLDivElement | null = null;
+
+function applyHistFilter(all: HistoryItem[]): HistoryItem[] {
   let list = all;
   if (histFilter.verdict) list = list.filter(it => it.label === histFilter.verdict);
   if (histFilter.type) list = list.filter(it => it.type === histFilter.type);
@@ -302,48 +315,54 @@ async function renderHistory() {
     const q = histFilter.search.toLowerCase();
     list = list.filter(it => it.value.toLowerCase().includes(q));
   }
+  return list;
+}
 
-  histList.replaceChildren();
-  // 筛选栏
-  const filterBar = h('div', { class: 'pp-filter' }, [
-    h('select', { id: 'hf-verdict', class: 'pp-fsel' }, [
-      h('option', { value: '', text: '全部判定' }),
-      h('option', { value: 'malicious', text: '恶意' }),
-      h('option', { value: 'suspicious', text: '可疑' }),
-      h('option', { value: 'clean', text: '干净' }),
-    ]),
-    h('select', { id: 'hf-type', class: 'pp-fsel' }, [
-      h('option', { value: '', text: '全部类型' }),
-      h('option', { value: 'ip', text: 'IP' }),
-      h('option', { value: 'domain', text: '域名' }),
-      h('option', { value: 'url', text: 'URL' }),
-      h('option', { value: 'hash', text: '哈希' }),
-    ]),
-    h('input', { class: 'pp-fsearch', placeholder: '搜索…', value: histFilter.search }),
-    h('button', {
-      class: 'pp-export-btn',
-      text: '导出 CSV',
-      onClick: () => exportHistoryCSV(list),
-    }),
-  ]);
-  histList.append(filterBar);
+async function renderHistory() {
+  const all = await getHistory();
+  const list = applyHistFilter(all);
 
-  // 绑定筛选事件
-  const fv = filterBar.querySelector('#hf-verdict') as HTMLSelectElement;
-  const ft = filterBar.querySelector('#hf-type') as HTMLSelectElement;
-  const fs = filterBar.querySelector('.pp-fsearch') as HTMLInputElement;
-  fv.value = histFilter.verdict;
-  ft.value = histFilter.type;
-  fv.addEventListener('change', () => { histFilter.verdict = fv.value; renderHistory(); });
-  ft.addEventListener('change', () => { histFilter.type = ft.value; renderHistory(); });
-  fs.addEventListener('input', () => { histFilter.search = fs.value; renderHistory(); });
+  if (!histFilterBuilt) {
+    histFilterBuilt = true;
+    const filterBar = h('div', { class: 'pp-filter' }, [
+      h('select', { id: 'hf-verdict', class: 'pp-fsel' }, [
+        h('option', { value: '', text: '全部判定' }),
+        h('option', { value: 'malicious', text: '恶意' }),
+        h('option', { value: 'suspicious', text: '可疑' }),
+        h('option', { value: 'clean', text: '干净' }),
+      ]),
+      h('select', { id: 'hf-type', class: 'pp-fsel' }, [
+        h('option', { value: '', text: '全部类型' }),
+        h('option', { value: 'ip', text: 'IP' }),
+        h('option', { value: 'domain', text: '域名' }),
+        h('option', { value: 'url', text: 'URL' }),
+        h('option', { value: 'hash', text: '哈希' }),
+      ]),
+      h('input', { class: 'pp-fsearch', placeholder: '搜索…', value: histFilter.search }),
+      h('button', {
+        class: 'pp-export-btn',
+        text: '导出 CSV',
+        onClick: async () => exportHistoryCSV(applyHistFilter(await getHistory())),
+      }),
+    ]);
+    const fv = filterBar.querySelector('#hf-verdict') as HTMLSelectElement;
+    const ft = filterBar.querySelector('#hf-type') as HTMLSelectElement;
+    const fs = filterBar.querySelector('.pp-fsearch') as HTMLInputElement;
+    fv.value = histFilter.verdict;
+    ft.value = histFilter.type;
+    fv.addEventListener('change', () => { histFilter.verdict = fv.value; renderHistory(); });
+    ft.addEventListener('change', () => { histFilter.type = ft.value; renderHistory(); });
+    fs.addEventListener('input', () => { histFilter.search = fs.value; renderHistory(); });
+    histListContainer = h('div', {});
+    histList.append(filterBar, histListContainer);
+  }
 
+  const c = histListContainer!;
+  c.replaceChildren();
   if (!list.length) {
-    histList.append(h('div', { class: 'pp-empty', text: '暂无查询记录' }));
+    c.append(h('div', { class: 'pp-empty', text: '暂无查询记录' }));
     return;
   }
-  // 底部提示
-  histList.append(h('div', { class: 'pp-hist-hint', text: `最多保留 100 条记录，当前 ${all.length} 条` }));
   for (const it of list.slice(0, 100)) {
     const item = h('div', { class: 'pp-hi' }, [
       h('span', { class: 'pp-hic', text: '●', style: { color: VC[it.label ?? 'unknown'] } }),
@@ -356,8 +375,10 @@ async function renderHistory() {
       showView('main');
       queryAndShow([{ type: it.type, value: it.value }], 0, false);
     });
-    histList.append(item);
+    c.append(item);
   }
+  // 底部提示（渲染在列表之后）
+  c.append(h('div', { class: 'pp-hist-hint', text: `最多保留 100 条记录，当前 ${all.length} 条` }));
 }
 
 function exportHistoryCSV(list: HistoryItem[]) {
@@ -365,7 +386,7 @@ function exportHistoryCSV(list: HistoryItem[]) {
   const body = list.map(it =>
     [it.type, it.value, it.label ?? '', it.score ?? '', new Date(it.ts).toISOString()].map(csvEscape).join(',')
   ).join('\n');
-  const blob = new Blob([header + body], { type: 'text/csv;charset=utf-8' });
+  const blob = new Blob(['\uFEFF' + header + body], { type: 'text/csv;charset=utf-8' }); // BOM：防止 Excel 打开中文乱码
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
@@ -381,6 +402,8 @@ function exportHistoryCSV(list: HistoryItem[]) {
   // 检查 popup 触发方式是否被关闭
   if (!settings.triggers.popup) {
     ppHint('您已在设置中关闭"工具栏图标弹窗"触发方式\n请到 ⚙ 设置中重新开启，或使用划词/右键查询');
+    input.disabled = true;
+    goBtn.disabled = true;
     return;
   }
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
@@ -408,8 +431,6 @@ async function renderQuota() {
     const usage = await getUsage(a.id);
     const limit = a.rateLimit.perDay;
     if (limit) {
-      const pct = Math.round((usage.today / limit) * 100);
-      const color = pct >= 80 ? '#e53935' : pct >= 50 ? '#fb8c00' : '#43a047';
       items.push(`${a.name}: ${usage.today}/${limit}`);
     }
   }

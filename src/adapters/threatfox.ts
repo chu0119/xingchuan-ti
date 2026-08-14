@@ -25,7 +25,11 @@ export const threatfox: Adapter = {
       body: JSON.stringify({ query: 'search_ioc', search_term: queryValue }),
     });
 
-    if (data?.query_status === 'no_result') {
+    // 白名单式校验：abuse.ch 正常返回 query_status:'ok'（有数据）或 'no_result'（查不到）。
+    // 其他任何状态（invalid_auth_key / no_auth_key / rate_limit 等）一律报错，
+    // 绝不能落入"无数据=clean"分支造成虚假干净判定。
+    const status = data?.query_status;
+    if (status === 'no_result') {
       return {
         source: 'threatfox',
         sourceName: 'ThreatFox',
@@ -38,8 +42,8 @@ export const threatfox: Adapter = {
       };
     }
 
-    if (data?.error || data?.query_status === 'illegal_search_term' || data?.query_status === 'rate_limit') {
-      throw new Error(data?.error || `ThreatFox: ${data?.query_status}`);
+    if (data?.error || status !== 'ok') {
+      throw new Error(data?.error || `ThreatFox: ${status ?? '未知错误'}`);
     }
 
     const iocs = Array.isArray(data?.data) ? data.data : [];

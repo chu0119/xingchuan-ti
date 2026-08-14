@@ -38,6 +38,8 @@ export interface RenderPanelMessage {
   value: string;
   results: QueryResult[];
   aggregate: AggregateResult;
+  verdictEscalated?: boolean;
+  lastLabel?: string;
 }
 
 export function sendRenderPanel(tabId: number, msg: RenderPanelMessage): Promise<void> {

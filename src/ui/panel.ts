@@ -13,6 +13,8 @@ export interface PanelPayload {
   value: string;
   results: QueryResult[];
   aggregate: AggregateResult;
+  verdictEscalated?: boolean;
+  lastLabel?: string;
 }
 
 export interface RenderOpts {

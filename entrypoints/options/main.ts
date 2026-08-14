@@ -57,17 +57,19 @@ const settings = await getSettings();
 document.documentElement.dataset.theme = resolvedTheme(settings.theme);
 document.head.append(h('style', { text: THEME_VARS }), h('style', { text: PANEL_CSS }), h('style', { text: CSS }));
 
-// API Key 健康检查（手动触发，避免浪费配额）
+// API Key 健康检查（手动触发，避免浪费配额；从输入框实时读取，不用页面加载时的陈旧快照）
 async function checkKeyHealth() {
   const btn = document.getElementById('check-health-btn') as HTMLButtonElement;
   if (btn) { btn.disabled = true; btn.textContent = '检测中…'; }
   let ok = 0, fail = 0;
   for (const a of ADAPTERS) {
-    const s = settings.sources[a.id];
-    if (!s?.enabled || !s.apiKey || !a.requiresKey) continue;
+    if (!a.requiresKey) continue;
+    const en = (document.getElementById(`en-${a.id}`) as HTMLInputElement | null)?.checked;
+    const key = (document.getElementById(`key-${a.id}`) as HTMLInputElement | null)?.value.trim() || '';
+    if (!en || !key) continue;
     const el = document.getElementById(`key-${a.id}`);
     try {
-      await a.query('ip', '8.8.8.8', s.apiKey);
+      await a.query('ip', '8.8.8.8', key);
       if (el) { el.style.borderColor = '#43a047'; el.title = 'Key 有效'; }
       ok++;
     } catch (e: any) {
@@ -97,7 +99,7 @@ function trigRow(id: string, label: string, checked: boolean) {
 // 配置导入 / 导出
 const inclKeys = h('input', { type: 'checkbox', checked: true, id: 'cfg-keys' });
 const cfgStatus = h('span', { class: 'muted', id: 'cfg-status' });
-const fileInput = h('input', { type: 'file', accept: 'application/json,.json', style: { display: 'none' }, id: 'cfg-file' });
+const fileInput = h('input', { type: 'file', accept: 'application/json,.json,.encrypted.json', style: { display: 'none' }, id: 'cfg-file' });
 function setCfgStatus(text: string, cls: string) {
   cfgStatus.className = cls;
   cfgStatus.textContent = text;
@@ -166,11 +168,39 @@ async function encryptConfig(plaintext: string, password: string): Promise<strin
   }
   return btoa(binary);
 }
+// AES-GCM 解密（与 encryptConfig 对称：salt(16) + iv(12) + ciphertext，base64 编码）
+async function decryptConfig(b64: string, password: string): Promise<string> {
+  const bin = atob(b64);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  const salt = bytes.slice(0, 16);
+  const iv = bytes.slice(16, 28);
+  const ct = bytes.slice(28);
+  const enc = new TextEncoder();
+  const keyMaterial = await crypto.subtle.importKey('raw', enc.encode(password), 'PBKDF2', false, ['deriveKey']);
+  const key = await crypto.subtle.deriveKey(
+    { name: 'PBKDF2', salt, iterations: 100000, hash: 'SHA-256' },
+    keyMaterial,
+    { name: 'AES-GCM', length: 256 },
+    false,
+    ['decrypt'],
+  );
+  const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, ct);
+  return new TextDecoder().decode(plain);
+}
 fileInput.addEventListener('change', async () => {
   const f = (fileInput as HTMLInputElement).files?.[0];
   if (!f) return;
   try {
-    const data = JSON.parse(await f.text());
+    const text = await f.text();
+    let jsonText = text;
+    if (!text.trim().startsWith('{')) {
+      // 加密导出的配置文件（纯 base64 密文），需密码解密
+      const pwd = prompt('该配置文件已加密，请输入导出时设置的密码：');
+      if (!pwd) throw new Error('已取消解密');
+      jsonText = await decryptConfig(text.trim(), pwd);
+    }
+    const data = JSON.parse(jsonText);
     if (data?.type !== 'threat-intel-helper-config' || !data.settings || typeof data.settings !== 'object') {
       throw new Error('文件格式不正确');
     }
@@ -339,7 +369,10 @@ async function saveAll() {
     s.sources[a.id] = {
       enabled: (document.getElementById(`en-${a.id}`) as HTMLInputElement).checked,
       apiKey: (document.getElementById(`key-${a.id}`) as HTMLInputElement).value.trim(),
-      weight: parseFloat((document.getElementById(`w-${a.id}`) as HTMLInputElement).value) || 1,
+      weight: (() => {
+        const w = parseFloat((document.getElementById(`w-${a.id}`) as HTMLInputElement).value);
+        return Number.isFinite(w) && w > 0 ? w : 1; // 负数/0/NaN 回退默认，防止破坏聚合
+      })(),
     };
   }
   for (const t of ['selection', 'contextMenu', 'popup'] as const) {

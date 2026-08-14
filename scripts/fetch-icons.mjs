@@ -29,6 +29,8 @@ const TARGETS = [
   ['greynoise', 'viz.greynoise.io'],
   ['urlscan', 'urlscan.io'],
   ['securitytrails', 'securitytrails.com'],
+  ['threatfox', 'threatfox.abuse.ch'],
+  ['malwarebazaar', 'bazaar.abuse.ch'],
 ];
 
 const isPng = b => b.length > 4 && b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4e && b[3] === 0x47;

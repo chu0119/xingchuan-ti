@@ -2,6 +2,42 @@
 
 本文件记录星川威胁情报助手的所有重要变更。
 
+## [0.6.3] - 2026-08-14
+
+### 🐛 Bug 修复（第二轮全面审计，P1×3 + P2×5 + P3×12）
+
+**P1（严重）**：
+- **abuse.ch 鉴权失败被静默判"干净"**：ThreatFox/MalwareBazaar 改为白名单式校验（仅 `query_status:'ok'` 或 `no_result` 进入判定），`invalid_auth_key`/`no_auth_key`/`rate_limit` 等一律报错，消除虚假 clean 判定
+- **verdict 升级告警是死代码**：background 已计算但 popup/content 均未透传——现已接线到两条前端路径，`.ti-escalation` 告警条可正常出现
+- **加密配置导出后无法导入**：补齐 `decryptConfig`（AES-GCM，与导出对称），导入时自动识别加密文件并提示输入密码
+
+**P2（重要）**：
+- popup 加载态未传主题参数——暗色主题下查询中闪白，已修复
+- content 的 prefers-color-scheme 监听用 `host.querySelector` 穿不进 Shadow DOM（no-op）——改用 `shadow?.querySelector`，auto 主题实时切换生效
+- 历史搜索每敲一个字符重建整个筛选栏——焦点丢失、中文输入法被打断；改为筛选栏只建一次、仅重渲染列表
+- 设置页"检测所有 Key"用页面加载时的陈旧快照（测的是旧 Key）——改为从输入框实时读取
+- `detectAll` 仍对整个 URL 全小写（与 `detectIndicator` 不一致，主路径走 detectAll）——改为仅 hostname 小写，保留路径/查询大小写
+
+**P3（改进）**：
+- CSV 导出加 BOM，Excel 打开中文表头不再乱码
+- popup 快速连续查询的响应竞态——加请求序号丢弃过期响应
+- 批量查询后切换主题会用旧的单查询结果覆盖批量视图——batchQuery 开头清空 `last`
+- 恶意桌面通知按指标去重（SW 生命周期内一次），批量查询不再刷屏；promise 补 catch
+- 微步适配器检查 `response_code`，Key 无效显式报错（原来显示"无明确判定"）
+- MalwareBazaar 移除域名支持（MB 无域名查询能力，tag 查询几乎必空，形成弱假信号），仅保留哈希
+- textarea 的 style 字符串被 `h()` 忽略（拖拽手柄/滚动条）——改为对象形式；`spellcheck:'false'` 反转问题修正
+- 历史底部提示渲染位置从列表上方移到下方
+- popup 触发方式关闭时禁用输入框与查询按钮（原来仍可查询，语义矛盾）
+- 查询/回车跳过输入法组合态（`isComposing`）
+- 设置页权重输入 clamp（负数/0/NaN 回退默认 1，防止破坏聚合）
+- 配额显示删除死变量、查询完成后刷新
+- popup 结果区高度 560→430，长结果不再裁切底栏
+- 补齐 ThreatFox/MalwareBazaar 平台图标（19/19 全部真实 favicon）
+
+### 🧪 测试
+- 27 项真实浏览器全功能实测（full-audit）全部通过
+- 逻辑 88 / 适配器 17 / popup / config / batch / close 全绿
+
 ## [0.6.2] - 2026-08-14
 
 ### 🐛 Bug 修复（P0 级）

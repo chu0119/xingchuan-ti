@@ -74,10 +74,8 @@ export const PLATFORMS: Platform[] = [
     buildUrl: both(v => `https://securitytrails.com/list/ip/${v}`, v => `https://securitytrails.com/domain/${v}/dns`), color: '#ad1457' },
   { id: 'threatfox', name: 'ThreatFox', region: 'intl', supports: ['ip', 'domain', 'url', 'hash'], favicon: 'threatfox.abuse.ch',
     buildUrl: (t, v) => `https://threatfox.abuse.ch/browse.php?search=${encodeURIComponent(v)}`, color: '#7b1fa2' },
-  { id: 'malwarebazaar', name: 'MalwareBazaar', region: 'intl', supports: ['hash', 'domain'], favicon: 'bazaar.abuse.ch',
-    buildUrl: (t, v) => t === 'hash'
-      ? `https://bazaar.abuse.ch/browse.php?search=sha256:${v}`
-      : `https://bazaar.abuse.ch/browse.php?search=tag:${v}`, color: '#4a148c' },
+  { id: 'malwarebazaar', name: 'MalwareBazaar', region: 'intl', supports: ['hash'], favicon: 'bazaar.abuse.ch',
+    buildUrl: (t, v) => (t === 'hash' ? `https://bazaar.abuse.ch/browse.php?search=sha256:${v}` : null), color: '#4a148c' },
 ];
 
 export function platformsFor(type: IndicatorType): Platform[] {

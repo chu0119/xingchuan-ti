@@ -53,13 +53,12 @@ export default defineContentScript({
     });
     // 跟随系统主题变化实时切换（auto 模式下）
     window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
-      if (host) {
-        const themeEl = host.querySelector('[data-theme]');
-        if (themeEl) {
-          getSettings().then(s => {
-            if (s.theme === 'auto') themeEl.setAttribute('data-theme', window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-          });
-        }
+      // 面板挂在 Shadow DOM 里，必须从 shadowRoot 查找（host 光域 querySelector 穿不进去）
+      const themeEl = shadow?.querySelector('[data-theme]');
+      if (themeEl) {
+        getSettings().then(s => {
+          if (s.theme === 'auto') themeEl.setAttribute('data-theme', window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        });
       }
     });
 
@@ -159,6 +158,8 @@ export default defineContentScript({
           onCopy: () => copyText(det.value).then(ok => toast(ok ? '已复制 ' + det.value : '复制失败')),
           onRefresh: () => queryAndShow(list, index, true),
           onClose: closePanel,
+          verdictEscalated: res.verdictEscalated,
+          lastLabel: res.lastLabel,
         };
         renderResults(rootEl, res, opts);
       } else {
@@ -177,6 +178,8 @@ export default defineContentScript({
         onCopy: () => copyText(p.value).then(ok => toast(ok ? '已复制 ' + p.value : '复制失败')),
         onRefresh: () => queryAndShow(pending, 0, true),
         onClose: closePanel,
+        verdictEscalated: p.verdictEscalated,
+        lastLabel: p.lastLabel,
       });
       attachDrag();
     }

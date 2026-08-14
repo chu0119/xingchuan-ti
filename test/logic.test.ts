@@ -45,6 +45,7 @@ eq('ipv6 不误判域名', isIPv6('example.com'), false);
 
 // URL 识别
 eq('URL 完整识别', detectIndicator('http://malware.example.com/payload.exe'), { type: 'url', value: 'http://malware.example.com/payload.exe' });
+eq('detectAll URL 仅 hostname 小写', (detectAll('see https://Example.COM/Path/Case.EXT?q=A')[0] || {}).value, 'https://example.com/Path/Case.EXT?q=A');
 eq('URL https', detectIndicator('https://phishing.site/login.php'), { type: 'url', value: 'https://phishing.site/login.php' });
 eq('URL 带端口', detectIndicator('http://c2.example.com:8080/beacon'), { type: 'url', value: 'http://c2.example.com:8080/beacon' });
 eq('非URL(纯域名)', detectIndicator('example.com'), { type: 'domain', value: 'example.com' });

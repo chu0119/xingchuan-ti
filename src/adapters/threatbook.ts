@@ -18,6 +18,11 @@ export const threatbook: Adapter = {
     const url = `https://api.threatbook.cn/v3/${endpoint}?${qs({ apikey: key, resource: value })}`;
     const data = await fetchJson(url);
 
+    // 微步 API 错误时返回非零 response_code + verbose_msg（如 Key 无效），必须显式报错
+    if (data?.response_code != null && data.response_code !== 0) {
+      throw new Error(data?.verbose_msg || `微步 API 错误 (code ${data.response_code})`);
+    }
+
     // 微步返回结构（IP/域名类似）：{ response_code, verbose_msg, threat_infos: { judgements:[...], confidence, tags_classes:[...] } }
     const ti = data?.threat_infos ?? {};
     const judgementsRaw: any[] = ti.judgements ?? data?.judgements ?? [];

@@ -101,7 +101,7 @@
 | [微步在线](https://x.threatbook.com/) | IP + 域名 | ~10次/天 + 100次/月 | 国内唯一明确免费 |
 | [urlscan.io](https://urlscan.io/) | IP + 域名 + URL | ~100次/天 | 免费，Key 可选（提高限额） |
 | [ThreatFox](https://threatfox.abuse.ch/) | IP + 域名 + URL + 哈希 | 免费 | C2 IOC 质量极高，需 Auth-Key |
-| [MalwareBazaar](https://bazaar.abuse.ch/) | 哈希 + 域名 | 免费 | 恶意样本关联，需 Auth-Key |
+| [MalwareBazaar](https://bazaar.abuse.ch/) | 哈希 | 免费 | 恶意样本关联，需 Auth-Key |
 | [Censys](https://search.censys.io/) | IP | 免费层有额度 | 与 Shodan 互补，需 API Key |
 
 ### 一键跳转（无需 Key）

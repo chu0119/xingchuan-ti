@@ -13,6 +13,9 @@ import { addHistory, getHistory } from '../src/lib/history';
 import { sendRenderPanel } from '../src/lib/messaging';
 import type { ErrorResponse, QueryResponse, RenderPanelMessage } from '../src/lib/messaging';
 
+// 已发过恶意通知的指标（SW 生命周期内去重，避免批量查询刷屏）
+const notifiedValues = new Set<string>();
+
 function errorResult(id: string, name: string, msg: string): QueryResult {
   return {
     source: id,
@@ -80,17 +83,23 @@ async function runQuery(
   // 记入最近查询历史（仅本地，确保写入完成后再返回）
   await addHistory({ type, value, ts: Date.now(), label: agg.label, score: agg.score });
 
-  // 恶性 verdict 桌面通知
-  if (settings.notifyOnMalicious && agg.label === 'malicious' && agg.score != null) {
+  // 恶性 verdict 桌面通知（同一指标 SW 生命周期内只通知一次，避免批量刷屏）
+  if (settings.notifyOnMalicious && agg.label === 'malicious' && agg.score != null && !notifiedValues.has(value)) {
+    notifiedValues.add(value);
     const title = `🚨 恶意指标: ${value}`;
     const msg = `综合评分 ${agg.score}/100 · ${agg.flagCount} 源确认恶意`;
-    chrome.notifications?.create?.(`mal-${Date.now()}`, {
-      type: 'basic',
-      iconUrl: 'icons/128.png',
-      title,
-      message: msg,
-      priority: 2,
-    });
+    try {
+      const p = chrome.notifications?.create?.(`mal-${Date.now()}`, {
+        type: 'basic',
+        iconUrl: 'icons/128.png',
+        title,
+        message: msg,
+        priority: 2,
+      });
+      if (p && typeof (p as any).catch === 'function') (p as Promise<unknown>).catch(() => {});
+    } catch {
+      /* 通知不可用时忽略 */
+    }
   }
 
   return { ok: true, type, value, results, aggregate: agg, verdictEscalated, lastLabel: prevLabel };
@@ -128,6 +137,8 @@ export default defineBackground(() => {
       value: res.value,
       results: res.results,
       aggregate: res.aggregate,
+      verdictEscalated: res.verdictEscalated,
+      lastLabel: res.lastLabel,
     };
     sendRenderPanel(tab.id, msg).catch(() => {});
   });
