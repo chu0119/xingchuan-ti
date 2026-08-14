@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/chu0119/xingchuan-ti/releases"><img src="https://img.shields.io/badge/version-0.6.5-blue?style=flat-square" alt="version"></a>
+  <a href="https://github.com/chu0119/xingchuan-ti/releases"><img src="https://img.shields.io/badge/version-0.7.0-blue?style=flat-square" alt="version"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPLv3-green?style=flat-square" alt="license"></a>
   <a href="#"><img src="https://img.shields.io/badge/tests-passing-brightgreen?style=flat-square" alt="tests"></a>
   <a href="https://microsoftedge.microsoft.com/addons/detail/%E6%98%9F%E5%B7%9D%E5%A8%81%E8%83%81%E6%83%85%E6%8A%A5%E5%8A%A9%E6%89%8B/bkbnepnebjjecbmdbliehglcknmenoal"><img src="https://img.shields.io/badge/Edge-Add--ons-blue?style=flat-square&logo=microsoftedge" alt="edge"></a>
@@ -106,7 +106,9 @@
 
 ## 🧩 情报源
 
-支持的指标类型：**IP**（v4/v6）、**域名**、**URL**、**文件哈希**（MD5 / SHA1 / SHA256）
+支持的指标类型：**IP**（v4/v6）、**域名**、**URL**（自动提取域名查询）、**文件哈希**（MD5 / SHA1 / SHA256）
+
+> 设置页内置每个源的**分步 API Key 申请指引**（含注册链接、步骤、免费额度说明）。AlienVault OTX **免注册**，装上即可查询。
 
 | 源 | 指标 | 免费额度 | 备注 |
 |---|---|---|---|
