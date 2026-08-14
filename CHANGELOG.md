@@ -2,6 +2,24 @@
 
 本文件记录星川威胁情报助手的所有重要变更。
 
+## [0.5.0] - 2026-08-14
+
+### ✨ 新增
+- **urlscan.io API 接入**：免费无需 Key（Key 可选提高限额），支持 IP+域名+URL，返回扫描结果和恶意标记
+- **ThreatFox (abuse.ch) 接入**：免费需 Auth-Key（注册获取），C2 IOC 质量极高，支持 IP+域名+URL+哈希
+- **MalwareBazaar (abuse.ch) 接入**：免费需 Auth-Key（注册获取），恶意样本关联，支持哈希+域名
+- **Censys API 接入**：免费层有额度，与 Shodan 互补，需 API Key
+
+### 🔧 改进
+- 情报源从 6 个增至 10 个
+- urlscan 默认开启（免费无需 Key），ThreatFox/MalwareBazaar/Censys 默认关闭（需配置 Key）
+- 跳转平台新增 ThreatFox、MalwareBazaar
+- README 情报源列表更新
+
+### 🧪 测试
+- 逻辑单测增至 88 个
+- 跳转携带指标回归测试覆盖新平台
+
 ## [0.4.0] - 2026-08-14
 
 ### ✨ 新增

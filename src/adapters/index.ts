@@ -8,8 +8,12 @@ import { otx } from './otx';
 import { shodan } from './shodan';
 import { greynoise } from './greynoise';
 import { threatbook } from './threatbook';
+import { urlscan } from './urlscan';
+import { threatfox } from './threatfox';
+import { malwarebazaar } from './malwarebazaar';
+import { censys } from './censys';
 
-export const ADAPTERS: Adapter[] = [virustotal, abuseipdb, otx, shodan, greynoise, threatbook];
+export const ADAPTERS: Adapter[] = [virustotal, abuseipdb, otx, shodan, greynoise, threatbook, urlscan, threatfox, malwarebazaar, censys];
 
 export const ADAPTER_MAP: Record<string, Adapter> = Object.fromEntries(ADAPTERS.map(a => [a.id, a]));
 

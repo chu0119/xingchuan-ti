@@ -14,6 +14,10 @@ export default defineConfig({
       'https://otx.alienvault.com/*',
       'https://api.shodan.io/*',
       'https://api.greynoise.io/*',
+      'https://urlscan.io/*',
+      'https://threatfox-api.abuse.ch/*',
+      'https://mb-api.abuse.ch/*',
+      'https://search.censys.io/*',
     ],
     icons: {
       16: 'icons/16.png',
