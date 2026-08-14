@@ -72,7 +72,7 @@ eq('detectAll 提取哈希', detectAll('hash is 44d88612fea8a8f36de82e1278abb02f
 function mkSettings(weights: Record<string, number>): Settings {
   const sources: Settings['sources'] = {};
   for (const [k, w] of Object.entries(weights)) sources[k] = { enabled: true, apiKey: 'x', weight: w };
-  return { sources, triggers: { selection: true, contextMenu: true, popup: true }, cacheTtlMin: 10, theme: 'auto' };
+  return { sources, triggers: { selection: true, contextMenu: true, popup: true }, cacheTtlMin: 10, theme: 'auto', notifyOnMalicious: true };
 }
 const r = (source: string, verdict: QueryResult['verdict'], score: number | null = null): QueryResult => ({
   source,

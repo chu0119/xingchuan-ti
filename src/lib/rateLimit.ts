@@ -35,3 +35,14 @@ export async function tryConsume(
   await chrome.storage.session.set({ [k]: cur });
   return { ok: true };
 }
+
+/** 获取某源当日已用次数 */
+export async function getUsage(id: string): Promise<{ today: number }> {
+  const k = key(id);
+  const cur = ((await chrome.storage.session.get(k))[k] as Usage | undefined) ?? {
+    day: { date: today(), count: 0 },
+    min: { start: 0, count: 0 },
+  };
+  if (cur.day.date !== today()) return { today: 0 };
+  return { today: cur.day.count };
+}

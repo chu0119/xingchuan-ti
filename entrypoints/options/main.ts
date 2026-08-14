@@ -179,8 +179,18 @@ wrap.append(
     trigRow('popup', '工具栏图标弹窗', settings.triggers.popup),
   ]),
 
+  // 通知
+  h('h2', {}, [h('span', { class: 'n', text: '4' }), '通知']),
+  h('div', { class: 'card' }, [
+    h('div', { class: 'row' }, [
+      h('input', { type: 'checkbox', id: 'notify-malicious', ...(settings.notifyOnMalicious ? { checked: true } : {}) }),
+      h('label', { for: 'notify-malicious', text: '恶性 verdict 桌面通知' }),
+      h('span', { class: 'muted', text: '查询结果为恶意时，浏览器通知提醒' }),
+    ]),
+  ]),
+
   // 缓存
-  h('h2', {}, [h('span', { class: 'n', text: '4' }), '缓存']),
+  h('h2', {}, [h('span', { class: 'n', text: '5' }), '缓存']),
   h('div', { class: 'card' }, [
     h('div', { class: 'row' }, [
       h('label', { class: 'k', text: '结果缓存(分钟)' }),
@@ -190,11 +200,11 @@ wrap.append(
   ]),
 
   // 跳转说明
-  h('h2', {}, [h('span', { class: 'n', text: '5' }), '一键跳转平台']),
+  h('h2', {}, [h('span', { class: 'n', text: '6' }), '一键跳转平台']),
   h('div', { class: 'card' }, [h('div', { class: 'muted', text: JUMP_ONLY_NOTE })]),
 
   // 配置导入 / 导出
-  h('h2', {}, [h('span', { class: 'n', text: '6' }), '配置导入 / 导出']),
+  h('h2', {}, [h('span', { class: 'n', text: '7' }), '配置导入 / 导出']),
   h('div', { class: 'card' }, [
     h('div', { class: 'row' }, [
       h('label', { class: 'k', text: '导出含 Key' }),
@@ -247,6 +257,7 @@ async function saveAll() {
     s.triggers[t] = (document.getElementById(`trig-${t}`) as HTMLInputElement).checked;
   }
   s.cacheTtlMin = parseInt((document.getElementById('ttl') as HTMLInputElement).value) || 0;
+  s.notifyOnMalicious = (document.getElementById('notify-malicious') as HTMLInputElement).checked;
   const checked = document.querySelector('input[name="theme"]:checked') as HTMLInputElement;
   if (checked) s.theme = checked.value as Settings['theme'];
   await saveSettings(s);

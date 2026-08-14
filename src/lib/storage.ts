@@ -17,6 +17,7 @@ export const DEFAULT_SETTINGS: Settings = {
   triggers: { selection: true, contextMenu: true, popup: true },
   cacheTtlMin: 10,
   theme: 'auto',
+  notifyOnMalicious: true,
 };
 
 export async function getSettings(): Promise<Settings> {
@@ -35,5 +36,6 @@ function mergeDefaults(stored?: Partial<Settings>): Settings {
     triggers: { ...DEFAULT_SETTINGS.triggers, ...(stored.triggers as any) },
     cacheTtlMin: stored.cacheTtlMin ?? DEFAULT_SETTINGS.cacheTtlMin,
     theme: (stored.theme as Settings['theme']) ?? DEFAULT_SETTINGS.theme,
+    notifyOnMalicious: stored.notifyOnMalicious ?? DEFAULT_SETTINGS.notifyOnMalicious,
   };
 }

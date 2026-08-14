@@ -4,6 +4,8 @@ import { detectAll } from '../../src/lib/detect';
 import type { Detected } from '../../src/lib/detect';
 import { getSettings, saveSettings } from '../../src/lib/storage';
 import { clearHistory, getHistory } from '../../src/lib/history';
+import { ADAPTERS } from '../../src/adapters';
+import { getUsage } from '../../src/lib/rateLimit';
 import { queryBackground } from '../../src/lib/messaging';
 import type { QueryResponse } from '../../src/lib/messaging';
 import type { AggregateResult } from '../../src/adapters/types';
@@ -59,9 +61,16 @@ body{margin:0;width:400px;background:var(--bg);color:var(--fg);font:13px/1.55 -a
 .pp-hi{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;cursor:pointer;}
 .pp-hi:hover{background:var(--softbg);}
 .pp-hic{font-size:9px;}
+.pp-htype{font-size:10px;padding:1px 5px;border-radius:6px;background:var(--chipbg);color:var(--chips);font-weight:600;min-width:28px;text-align:center;}
 .pp-hiv{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--fg);}
 .pp-him{font-size:11px;color:var(--muted);}
 .pp-empty{padding:40px 20px;text-align:center;color:var(--muted);font-size:13px;}
+.pp-filter{display:flex;gap:6px;padding:8px 10px;border-bottom:1px solid var(--border2);flex-wrap:wrap;align-items:center;}
+.pp-fsel{border:1px solid var(--border);border-radius:7px;padding:5px 8px;font-size:11px;background:var(--bg);color:var(--fg);outline:none;}
+.pp-fsearch{flex:1;min-width:80px;border:1px solid var(--border);border-radius:7px;padding:5px 8px;font-size:11px;background:var(--bg);color:var(--fg);outline:none;}
+.pp-export-btn{background:var(--chipbg);color:var(--fg);border:1px solid var(--border);border-radius:7px;padding:5px 10px;font-size:11px;cursor:pointer;white-space:nowrap;}
+.pp-export-btn:hover{background:var(--hover);}
+.pp-quota{font-size:10px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px;}
 `;
 
 const LOGO = `<svg viewBox="0 0 128 128" fill="none"><path d="M64 24 L98 37 V63 C98 88 83 104 64 110 C45 104 30 88 30 63 V37 Z" fill="#fff"/><circle cx="56" cy="57" r="13" fill="none" stroke="#4f46e5" stroke-width="7"/><line x1="65" y1="66" x2="76" y2="78" stroke="#4f46e5" stroke-width="8" stroke-linecap="round"/></svg>`;
@@ -111,7 +120,7 @@ const mainView = h('div', { class: 'pp-view' }, [
   ]),
   h('div', { class: 'pp-search' }, [input, goBtn]),
   out,
-  h('div', { class: 'pp-foot' }, [h('span', { text: '结果仅供参考 · 在 ⚙ 设置中配置 API Key' })]),
+  h('div', { class: 'pp-foot' }, [h('span', { text: '结果仅供参考 · 在 ⚙ 设置中配置 API Key' }), h('div', { id: 'pp-quota', class: 'pp-quota', style: { marginLeft: 'auto' } })]),
 ]);
 
 // ===== 历史视图（二级页，默认隐藏）=====
@@ -270,16 +279,63 @@ syncThemeIcon();
 
 // ===== 历史 =====
 histBtn.addEventListener('click', () => { renderHistory(); showView('history'); });
+// 筛选器状态
+let histFilter = { verdict: '', type: '', search: '' };
+
 async function renderHistory() {
-  const list = await getHistory();
+  const all = await getHistory();
+  // 筛选
+  let list = all;
+  if (histFilter.verdict) list = list.filter(it => it.label === histFilter.verdict);
+  if (histFilter.type) list = list.filter(it => it.type === histFilter.type);
+  if (histFilter.search) {
+    const q = histFilter.search.toLowerCase();
+    list = list.filter(it => it.value.toLowerCase().includes(q));
+  }
+
   histList.replaceChildren();
+  // 筛选栏
+  const filterBar = h('div', { class: 'pp-filter' }, [
+    h('select', { id: 'hf-verdict', class: 'pp-fsel' }, [
+      h('option', { value: '', text: '全部判定' }),
+      h('option', { value: 'malicious', text: '恶意' }),
+      h('option', { value: 'suspicious', text: '可疑' }),
+      h('option', { value: 'clean', text: '干净' }),
+    ]),
+    h('select', { id: 'hf-type', class: 'pp-fsel' }, [
+      h('option', { value: '', text: '全部类型' }),
+      h('option', { value: 'ip', text: 'IP' }),
+      h('option', { value: 'domain', text: '域名' }),
+      h('option', { value: 'url', text: 'URL' }),
+      h('option', { value: 'hash', text: '哈希' }),
+    ]),
+    h('input', { class: 'pp-fsearch', placeholder: '搜索…', value: histFilter.search }),
+    h('button', {
+      class: 'pp-export-btn',
+      text: '导出 CSV',
+      onClick: () => exportHistoryCSV(list),
+    }),
+  ]);
+  histList.append(filterBar);
+
+  // 绑定筛选事件
+  const fv = filterBar.querySelector('#hf-verdict') as HTMLSelectElement;
+  const ft = filterBar.querySelector('#hf-type') as HTMLSelectElement;
+  const fs = filterBar.querySelector('.pp-fsearch') as HTMLInputElement;
+  fv.value = histFilter.verdict;
+  ft.value = histFilter.type;
+  fv.addEventListener('change', () => { histFilter.verdict = fv.value; renderHistory(); });
+  ft.addEventListener('change', () => { histFilter.type = ft.value; renderHistory(); });
+  fs.addEventListener('input', () => { histFilter.search = fs.value; renderHistory(); });
+
   if (!list.length) {
     histList.append(h('div', { class: 'pp-empty', text: '暂无查询记录' }));
     return;
   }
-  for (const it of list.slice(0, 50)) {
+  for (const it of list.slice(0, 100)) {
     const item = h('div', { class: 'pp-hi' }, [
       h('span', { class: 'pp-hic', text: '●', style: { color: VC[it.label ?? 'unknown'] } }),
+      h('span', { class: 'pp-htype', text: it.type.toUpperCase() }),
       h('span', { class: 'pp-hiv', text: it.value }),
       h('span', { class: 'pp-him', text: `${VERDICT_TEXT[it.label ?? 'unknown'] ?? ''} · ${it.score ?? '—'}` }),
     ]);
@@ -290,6 +346,22 @@ async function renderHistory() {
     });
     histList.append(item);
   }
+}
+
+function exportHistoryCSV(list: typeof histFilter extends never ? never : Awaited<ReturnType<typeof getHistory>>) {
+  const header = '类型,值,判定,分数,时间\n';
+  const body = list.map(it =>
+    `${it.type},${it.value},${it.label ?? ''},${it.score ?? ''},${new Date(it.ts).toISOString()}`
+  ).join('\n');
+  const blob = new Blob([header + body], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `xingchuan-ti-history-${new Date().toISOString().slice(0, 10)}.csv`;
+  document.body.append(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
 }
 
 // ===== 初始化 =====
@@ -304,5 +376,27 @@ async function renderHistory() {
     }
   }
   input.focus();
-  ppHint('输入或粘贴 IP / 域名，回车查询\n结果下方可一键跳转各情报平台');
+  ppHint('输入或粘贴 IP / 域名 / URL / 哈希，回车查询\n多行自动批量查询 · Shift+Enter 换行');
+  renderQuota();
 })();
+
+// 配额显示
+async function renderQuota() {
+  const quotaEl = document.getElementById('pp-quota');
+  if (!quotaEl) return;
+  const items: string[] = [];
+  for (const a of ADAPTERS) {
+    const s = settings.sources[a.id];
+    if (!s?.enabled || !s.apiKey) continue;
+    const usage = await getUsage(a.id);
+    const limit = a.rateLimit.perDay;
+    if (limit) {
+      const pct = Math.round((usage.today / limit) * 100);
+      const color = pct >= 80 ? '#e53935' : pct >= 50 ? '#fb8c00' : '#43a047';
+      items.push(`${a.name}: ${usage.today}/${limit}`);
+    }
+  }
+  if (items.length) {
+    quotaEl.textContent = items.join(' · ');
+  }
+}

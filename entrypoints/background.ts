@@ -9,7 +9,7 @@ import { aggregate } from '../src/lib/score';
 import { tryConsume } from '../src/lib/rateLimit';
 import { getCached, setCached } from '../src/lib/cache';
 import { detectIndicator } from '../src/lib/detect';
-import { addHistory } from '../src/lib/history';
+import { addHistory, getHistory } from '../src/lib/history';
 import { sendRenderPanel } from '../src/lib/messaging';
 import type { ErrorResponse, QueryResponse, RenderPanelMessage } from '../src/lib/messaging';
 
@@ -69,11 +69,31 @@ async function runQuery(
   );
 
   const agg = aggregate(results, settings);
+
+  // verdict 升级告警：比对上次 verdict
+  const hist = await getHistory();
+  const prev = hist.find(h => h.type === type && h.value === value);
+  const prevLabel = prev?.label;
+  const verdictEscalated = prevLabel === 'clean' && (agg.label === 'suspicious' || agg.label === 'malicious');
+
   await setCached(type, value, { results, aggregate: agg }, settings.cacheTtlMin);
   // 记入最近查询历史（仅本地）
   addHistory({ type, value, ts: Date.now(), label: agg.label, score: agg.score }).catch(() => {});
 
-  return { ok: true, type, value, results, aggregate: agg };
+  // 恶性 verdict 桌面通知
+  if (settings.notifyOnMalicious && agg.label === 'malicious' && agg.score != null) {
+    const title = `🚨 恶意指标: ${value}`;
+    const msg = `综合评分 ${agg.score}/100 · ${agg.flagCount} 源确认恶意`;
+    chrome.notifications?.create?.(`mal-${Date.now()}`, {
+      type: 'basic',
+      iconUrl: 'icons/128.png',
+      title,
+      message: msg,
+      priority: 2,
+    });
+  }
+
+  return { ok: true, type, value, results, aggregate: agg, verdictEscalated, lastLabel: prevLabel };
 }
 
 export default defineBackground(() => {
@@ -120,5 +140,30 @@ export default defineBackground(() => {
       return true;
     }
     return false;
+  });
+
+  // 键盘快捷键：Ctrl+Shift+Y 查询当前选中文本
+  chrome.commands?.onCommand?.addListener(async (command) => {
+    if (command !== 'query-selection') return;
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (!tab?.id) return;
+    try {
+      const resp = (await chrome.tabs.sendMessage(tab.id, { kind: 'getSelection' })) as { text?: string } | undefined;
+      const text = resp?.text;
+      if (!text) return;
+      const det = detectIndicator(text);
+      if (!det) return;
+      const res = await runQuery(det.type, det.value);
+      if (!res.ok) return;
+      sendRenderPanel(tab.id, {
+        kind: 'renderPanel',
+        type: res.type,
+        value: res.value,
+        results: res.results,
+        aggregate: res.aggregate,
+      }).catch(() => {});
+    } catch {
+      /* 无 content script */
+    }
   });
 });

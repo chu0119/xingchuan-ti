@@ -25,6 +25,9 @@ export interface RenderOpts {
   index?: number;
   onPrev?: () => void;
   onNext?: () => void;
+  /** verdict 升级告警 */
+  verdictEscalated?: boolean;
+  lastLabel?: string;
 }
 
 const VERDICT_TEXT: Record<string, string> = { malicious: '恶意', suspicious: '可疑', clean: '干净', unknown: '未知' };
@@ -221,18 +224,18 @@ export function renderResults(root: HTMLElement | ShadowRoot, p: PanelPayload, o
       ]),
     ]),
   ]);
+  // verdict 升级告警条
+  const escalation = opts.verdictEscalated
+    ? h('div', { class: 'ti-escalation', text: `⚠ 上次查为 ${opts.lastLabel === 'clean' ? '干净' : opts.lastLabel}，本次升级为 ${VERDICT_TEXT[agg.label]}` })
+    : null;
+
   const foot = h('div', { class: 'ti-foot' }, [
     h('span', { text: '结果仅供参考，最终判断请结合上下文' }),
     opts.onOpenSettings ? h('a', { text: '设置', onClick: opts.onOpenSettings }) : null,
   ]);
 
-  const shell = h('div', { class: 'ti-shell', dataset: { theme: opts.theme ?? 'light' } }, [
-    head,
-    scoreband,
-    sourceSection(p.results),
-    jumpSection(p.type, p.value),
-    foot,
-  ]);
+  const kids: (Node | null)[] = [head, escalation, scoreband, sourceSection(p.results), jumpSection(p.type, p.value), foot];
+  const shell = h('div', { class: 'ti-shell', dataset: { theme: opts.theme ?? 'light' } }, kids.filter(Boolean) as Node[]);
   root.append(shell);
 }
 

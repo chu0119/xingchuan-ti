@@ -16,6 +16,9 @@ export interface QueryResponse {
   value: string;
   results: QueryResult[];
   aggregate: AggregateResult;
+  /** verdict 升级告警：上次为 clean，本次为 suspicious/malicious */
+  verdictEscalated?: boolean;
+  lastLabel?: string;
 }
 
 export interface ErrorResponse {

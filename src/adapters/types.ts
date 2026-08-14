@@ -63,4 +63,6 @@ export interface Settings {
   cacheTtlMin: number;
   /** 主题：light / dark / auto（跟随系统） */
   theme: 'light' | 'dark' | 'auto';
+  /** 恶性 verdict 桌面通知 */
+  notifyOnMalicious: boolean;
 }

@@ -9,10 +9,12 @@ export interface HistoryItem {
   ts: number;
   label?: string;
   score?: number | null;
+  /** 上次查询的 verdict（用于 verdict 升级告警） */
+  lastLabel?: string;
 }
 
 const KEY = 'history';
-const CAP = 50;
+const CAP = 100;
 
 export async function getHistory(): Promise<HistoryItem[]> {
   const arr = (await chrome.storage.local.get(KEY))[KEY];
@@ -21,6 +23,11 @@ export async function getHistory(): Promise<HistoryItem[]> {
 
 export async function addHistory(item: HistoryItem): Promise<void> {
   const list = await getHistory();
+  // 保留上次 verdict（用于升级告警）
+  const existing = list.find(x => x.type === item.type && x.value === item.value);
+  if (existing?.label) {
+    item.lastLabel = existing.label;
+  }
   const filtered = list.filter(x => !(x.type === item.type && x.value === item.value));
   filtered.unshift(item);
   await chrome.storage.local.set({ [KEY]: filtered.slice(0, CAP) });

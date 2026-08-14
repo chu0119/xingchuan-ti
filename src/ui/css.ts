@@ -115,4 +115,5 @@ export const PANEL_CSS = `
   display:flex; gap:12px; align-items:center; background:var(--softbg); }
 .ti-foot a{ color:var(--accent); text-decoration:none; cursor:pointer; }
 .ti-foot a:hover{ text-decoration:underline; }
+.ti-escalation{ padding:8px 12px; background:rgba(251,140,0,.12); color:#e65100; font-size:12px; font-weight:600; border-bottom:1px solid rgba(251,140,0,.2); }
 `;
