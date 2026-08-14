@@ -4,8 +4,8 @@ import { defineConfig } from 'wxt';
 // 这里补充权限、host 权限、图标和元信息。
 export default defineConfig({
   manifest: {
-    name: '威胁情报助手',
-    description: '划词识别 IP/域名，多源威胁情报加权研判 + 一键跳转国内主流情报平台',
+    name: '星川威胁情报助手',
+    description: '划词识别 IP/域名/URL/哈希，多源威胁情报加权研判 + 一键跳转国内主流情报平台',
     permissions: ['contextMenus', 'storage', 'activeTab', 'notifications'],
     host_permissions: [
       'https://api.threatbook.cn/v3/*',
@@ -29,7 +29,7 @@ export default defineConfig({
       128: 'icons/128.png',
     },
     action: {
-      default_title: '威胁情报助手',
+      default_title: '星川威胁情报助手',
       default_icon: { 16: 'icons/16.png', 32: 'icons/32.png', 48: 'icons/48.png', 128: 'icons/128.png' },
     },
     // 内容脚本会把图标 <img> 注入网页，必须声明为 web_accessible_resources 才能加载
