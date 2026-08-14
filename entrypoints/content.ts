@@ -52,6 +52,17 @@ export default defineContentScript({
         selEnabled = ns?.triggers?.selection ?? selEnabled;
       }
     });
+    // 跟随系统主题变化实时切换（auto 模式下）
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+      if (host) {
+        const themeEl = host.querySelector('[data-theme]');
+        if (themeEl) {
+          getSettings().then(s => {
+            if (s.theme === 'auto') themeEl.setAttribute('data-theme', window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+          });
+        }
+      }
+    });
 
     function toast(msg: string) {
       const t = h('div', {

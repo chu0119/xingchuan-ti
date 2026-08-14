@@ -193,7 +193,9 @@ fileInput.addEventListener('change', async () => {
     clearTimeout(saveTimer);
     await saveSettings(s);
     setCfgStatus('已导入，正在刷新…', 'toast');
-    setTimeout(() => location.reload(), 400);
+    setTimeout(() => {
+      try { location.reload(); } catch { skipAutoSave = false; }
+    }, 400);
   } catch (e: any) {
     setCfgStatus('导入失败：' + (e?.message || '解析错误'), 'muted');
     (fileInput as HTMLInputElement).value = '';
@@ -310,16 +312,21 @@ document.body.append(wrap);
 // 自动保存：任意输入变化后防抖保存（无需点保存按钮）
 let skipAutoSave = false;
 let saveTimer: ReturnType<typeof setTimeout> | undefined;
+let saveCount = 0;
 function scheduleSave() {
   if (skipAutoSave) return;
+  saveCount++;
   status.className = 'muted';
   status.textContent = '保存中…';
   clearTimeout(saveTimer);
   saveTimer = setTimeout(async () => {
     await saveAll();
+    const n = ++saveCount;
     status.className = 'toast';
     status.textContent = '已自动保存 ✓';
-  }, 400);
+    // 2秒后如果没新的保存，清除提示
+    setTimeout(() => { if (saveCount === n) status.textContent = ''; }, 2000);
+  }, 500);
 }
 wrap.querySelectorAll('input').forEach(el => {
   el.addEventListener('input', scheduleSave);

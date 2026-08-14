@@ -376,8 +376,13 @@ function exportHistoryCSV(list: HistoryItem[]) {
   URL.revokeObjectURL(url);
 }
 
-// ===== 初始化 =====
+  // ===== 初始化 =====
 (async () => {
+  // 检查 popup 触发方式是否被关闭
+  if (!settings.triggers.popup) {
+    ppHint('您已在设置中关闭"工具栏图标弹窗"触发方式\n请到 ⚙ 设置中重新开启，或使用划词/右键查询');
+    return;
+  }
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   if (tab?.id) {
     try {
@@ -410,5 +415,6 @@ async function renderQuota() {
   }
   if (items.length) {
     quotaEl.textContent = items.join(' · ');
+    quotaEl.title = items.join('\n');
   }
 }
