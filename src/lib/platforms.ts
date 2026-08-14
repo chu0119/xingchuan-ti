@@ -37,7 +37,7 @@ export const PLATFORMS: Platform[] = [
   { id: 'chaitin', name: '长亭', region: 'cn', supports: ['ip'], favicon: 'rivers.chaitin.cn',
     buildUrl: ip(v => `https://rivers.chaitin.cn/ip-intelligence?search=${v}`), color: '#1565c0' },
   { id: 'tencent', name: '腾讯TIX', region: 'cn', supports: ['ip', 'domain'], favicon: 'tix.qq.com',
-    buildUrl: both(v => `https://tix.qq.com/#/ti/ip/${v}`, v => `https://tix.qq.com/#/ti/domain/${v}`), color: '#0052d9' },
+    buildUrl: both(v => `https://tix.qq.com/search/single?keyword=${v}`, v => `https://tix.qq.com/search/single?keyword=${v}`), color: '#0052d9' },
   { id: '360', name: '360', region: 'cn', supports: ['ip', 'domain'], favicon: 'ti.360.net',
     buildUrl: both(v => `https://ti.360.net/ip/${v}`, v => `https://ti.360.net/domain/${v}`), color: '#43a047' },
   { id: 'nsfocus', name: '绿盟', region: 'cn', supports: ['ip', 'domain'], favicon: 'ti.nsfocus.com',
@@ -73,7 +73,7 @@ export const PLATFORMS: Platform[] = [
   { id: 'securitytrails', name: 'SecurityTrails', region: 'intl', supports: ['ip', 'domain'], favicon: 'securitytrails.com',
     buildUrl: both(v => `https://securitytrails.com/list/ip/${v}`, v => `https://securitytrails.com/domain/${v}/dns`), color: '#ad1457' },
   { id: 'threatfox', name: 'ThreatFox', region: 'intl', supports: ['ip', 'domain', 'url', 'hash'], favicon: 'threatfox.abuse.ch',
-    buildUrl: (t, v) => `https://threatfox.abuse.ch/browse/search/${encodeURIComponent(v)}`, color: '#7b1fa2' },
+    buildUrl: (t, v) => `https://threatfox.abuse.ch/browse.php?search=${encodeURIComponent(v)}`, color: '#7b1fa2' },
   { id: 'malwarebazaar', name: 'MalwareBazaar', region: 'intl', supports: ['hash', 'domain'], favicon: 'bazaar.abuse.ch',
     buildUrl: (t, v) => t === 'hash'
       ? `https://bazaar.abuse.ch/browse.php?search=sha256:${v}`
