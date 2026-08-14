@@ -103,32 +103,37 @@ function barFor(r: QueryResult) {
 /** 详情卡：r 为 null 时显示提示；点击方块后传入具体源，持久显示。 */
 function renderDetail(el: HTMLElement, r: QueryResult | null) {
   el.replaceChildren();
-  const kids: (Node | string)[] = [];
   if (!r) {
     el.classList.add('idle');
-    kids.push(h('div', { class: 'ti-dhint', text: '点击方块查看该源的判定详情' }));
+    el.append(h('div', { class: 'ti-dhint', text: '点击方块查看该源的判定详情' }));
+    return;
+  }
+  el.classList.remove('idle');
+  const v: Verdict | 'error' = r.error ? 'error' : r.verdict;
+
+  // 顶部行：源名 + 判定标签 + 分数 + 详情链接
+  const topRow = h('div', { class: 'ti-dtop' }, [
+    h('span', { class: 'ti-name', text: r.sourceName }),
+    verdictChip(v),
+    h('span', { class: 'ti-srcscore', text: r.error ? '' : r.score == null ? '—' : String(r.score) }),
+    r.detailsUrl ? h('a', { class: 'ti-src-link', text: '详情 →', href: r.detailsUrl, target: '_blank', rel: 'noopener' }) : null,
+  ]);
+  el.append(topRow);
+
+  if (r.error) {
+    // 错误状态：简洁展示错误信息，不显示图标/标签/评分条
+    el.append(h('div', { class: 'ti-err-row' }, [
+      h('span', { class: 'ti-err-icon', text: '⚠' }),
+      h('span', { class: 'ti-summary ti-err', text: r.error }),
+    ]));
   } else {
-    el.classList.remove('idle');
-    const v: Verdict | 'error' = r.error ? 'error' : r.verdict;
-    kids.push(
-      h('div', { class: 'ti-dtop' }, [
-        makeIcon(r.source, '#646a73'),
-        h('span', { class: 'ti-name', text: r.sourceName }),
-        verdictChip(v),
-        h('span', { class: 'ti-srcscore', text: r.error ? '' : r.score == null ? '—' : String(r.score) }),
-        r.detailsUrl ? h('a', { class: 'ti-src-link', text: '详情 →', href: r.detailsUrl, target: '_blank', rel: 'noopener' }) : null,
-      ]),
-    );
-    if (r.error) {
-      kids.push(h('div', { class: 'ti-summary ti-err', text: r.error }));
-    } else {
-      if (r.summary) kids.push(h('div', { class: 'ti-summary', text: r.summary }));
-      const bar = barFor(r);
-      if (bar) kids.push(bar);
-      if (r.tags.length) kids.push(h('div', { class: 'ti-tags' }, r.tags.slice(0, 8).map(t => h('span', { class: 'ti-tag', text: t }))));
+    if (r.summary) el.append(h('div', { class: 'ti-summary', text: r.summary }));
+    const bar = barFor(r);
+    if (bar) el.append(bar);
+    if (r.tags.length) {
+      el.append(h('div', { class: 'ti-tags' }, r.tags.slice(0, 8).map(t => h('span', { class: 'ti-tag', text: t }))));
     }
   }
-  el.append(...kids);
 }
 
 function sourceSection(results: QueryResult[]) {

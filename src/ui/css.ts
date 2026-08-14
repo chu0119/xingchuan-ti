@@ -85,6 +85,9 @@ export const PANEL_CSS = `
 .ti-tags{ display:flex; flex-wrap:wrap; gap:4px; margin-top:5px; }
 .ti-tag{ font-size:10px; padding:2px 7px; border-radius:8px; background:var(--tagbg); color:var(--tags); }
 .ti-err{ color:#e53935; }
+.ti-err-row{ display:flex; align-items:flex-start; gap:6px; padding:6px 8px; border-radius:6px; background:rgba(229,57,53,.06); border:1px solid rgba(229,57,53,.15); }
+.ti-err-icon{ font-size:14px; flex:none; line-height:1; }
+.ti-err-row .ti-err{ font-size:12px; word-break:break-all; }
 
 /* 跳转：厂家图标 */
 .ti-jsep{ display:flex; align-items:center; gap:8px; margin:9px 2px 6px; }

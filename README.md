@@ -40,18 +40,14 @@
 选中 IP/域名/URL/哈希，旁边自动出现「🔍 情报查询」浮窗按钮，点击即可聚合多个情报源结果。
 
 <p align="center">
-  <img src="docs/images/popup-malicious-light.png" alt="亮色弹窗 - 恶意 IP 研判" width="420">
-  <br>
-  <em>亮色弹窗：恶意 IP 多源研判结果</em>
+  <img src="docs/images/popup-malicious-light.png" alt="亮色弹窗 - 恶意 IP 研判" width="400">
 </p>
 
 ### 📊 多源加权研判
 10 个情报源并行查询，加权综合评分（恶意/可疑/干净），透明展示每个源的贡献和置信度。
 
 <p align="center">
-  <img src="docs/images/popup-malicious-dark.png" alt="暗色弹窗 - 恶意 IP 研判" width="420">
-  <br>
-  <em>暗色弹窗：恶意 IP 多源研判结果</em>
+  <img src="docs/images/popup-malicious-dark.png" alt="暗色弹窗 - 恶意 IP 研判" width="400">
 </p>
 
 **评分模型特点**：
@@ -74,9 +70,7 @@
 一键切换，设置页可选"跟随系统"，适应不同工作环境。
 
 <p align="center">
-  <img src="docs/images/options-light.png" alt="设置页 - 亮色" width="700">
-  <br>
-  <em>设置页：情报源配置 + API 申请指引 + 配置导入导出</em>
+  <img src="docs/images/options-light.png" alt="设置页 - 亮色" width="780">
 </p>
 
 ### 📋 配置导入导出
