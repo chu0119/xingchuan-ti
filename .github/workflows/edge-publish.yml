@@ -1,11 +1,12 @@
-# Edge Add-ons 自动发布工作流
-# 触发：在 GitHub 创建 Release 时自动上传到 Edge 商店并提交审核
+# Edge Add-ons 自动发布工作流（基于官方 v1.1 REST API 文档）
+# https://learn.microsoft.com/en-us/microsoft-edge/extensions/update/api/using-addons-api
 #
 # 需要在仓库 Settings → Secrets and variables → Actions 添加：
-#   EDGE_PRODUCT_ID - Partner Center 产品 ID（URL 里的那串）
-#   EDGE_API_TOKEN  - Partner Center API Primary access token
+#   EDGE_PRODUCT_ID - Partner Center 产品 ID（Extension overview 页面可见）
+#   EDGE_API_TOKEN  - Publish API 页面的 API key
+#   EDGE_CLIENT_ID  - Publish API 页面的 Client ID
 #
-# 发布流程：改版本号 → git push → 创建 Release → 自动上架 Edge 商店
+# 发布流程：创建 Release → 自动上传到 Edge 商店 → 自动提交审核
 name: Publish to Edge Add-ons
 
 on:
@@ -17,40 +18,71 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-
       - run: npm ci
       - run: npm run build
       - run: npm run zip
 
-      - name: Upload to Edge Add-ons
+      - name: Upload & Publish to Edge Add-ons
         run: |
           ZIP_FILE=$(ls .output/*.zip)
+          API="https://api.addons.microsoftedge.microsoft.com"
+          PID="${EDGE_PRODUCT_ID}"
           echo "Uploading: $ZIP_FILE"
 
-          # 提交新版本包
-          curl -s -X POST \
-            "https://api.partnercenter.microsoft.com/edge/v1/products/${EDGE_PRODUCT_ID}/submissions/draft/package" \
+          # 上传 zip（返回 202 + Location header 含 operationID）
+          UPLOAD_RESP=$(curl -s -D headers.txt -X POST \
+            "${API}/v1/products/${PID}/submissions/draft/package" \
             -H "Authorization: ApiKey ${EDGE_API_TOKEN}" \
-            -F "file=@${ZIP_FILE}" \
-            -o upload_response.json
+            -H "X-ClientID: ${EDGE_CLIENT_ID}" \
+            -H "Content-Type: application/zip" \
+            --data-binary "@${ZIP_FILE}")
 
-          echo "Upload response:"
-          cat upload_response.json
+          HTTP_CODE=$(head -1 headers.txt | awk '{print $2}')
+          OP_ID=$(grep -i "^location:" headers.txt | sed 's/.*operations\///' | tr -d '\r\n')
+          echo "Upload HTTP: $HTTP_CODE | Operation ID: $OP_ID"
+          cat headers.txt | head -5
+          echo "Body: $UPLOAD_RESP"
 
-          # 提交审核
-          curl -s -X POST \
-            "https://api.partnercenter.microsoft.com/edge/v1/products/${EDGE_PRODUCT_ID}/submissions/draft/commit" \
+          if [ "$HTTP_CODE" != "202" ] && [ "$HTTP_CODE" != "200" ]; then
+            echo "❌ Upload failed"
+            exit 1
+          fi
+
+          # 轮询上传状态（最多等 60 秒）
+          for i in $(seq 1 12); do
+            sleep 5
+            STATUS_JSON=$(curl -s "${API}/v1/products/${PID}/submissions/draft/package/operations/${OP_ID}" \
+              -H "Authorization: ApiKey ${EDGE_API_TOKEN}" \
+              -H "X-ClientID: ${EDGE_CLIENT_ID}")
+            STATUS=$(echo "$STATUS_JSON" | grep -o '"status":"[^"]*"' | cut -d'"' -f4)
+            MSG=$(echo "$STATUS_JSON" | grep -o '"message":"[^"]*"' | cut -d'"' -f4)
+            echo "Poll $i: $STATUS - $MSG"
+            [ "$STATUS" = "Succeeded" ] && break
+            [ "$STATUS" = "Failed" ] && { echo "❌ Upload failed: $STATUS_JSON"; exit 1; }
+          done
+          echo "✅ Package uploaded"
+
+          # 提交审核（JSON body：{"notes": "..."}）
+          NOTES="Release $(grep '"version"' package.json | head -1 | grep -o '[0-9][^"]*')"
+          COMMIT_RESP=$(curl -s -D commit_headers.txt -X POST \
+            "${API}/v1/products/${PID}/submissions" \
             -H "Authorization: ApiKey ${EDGE_API_TOKEN}" \
-            -o commit_response.json
+            -H "X-ClientID: ${EDGE_CLIENT_ID}" \
+            -H "Content-Type: application/json" \
+            -d "{\"notes\":\"${NOTES} - auto published via GitHub Actions\"}")
 
-          echo "Commit response:"
-          cat commit_response.json
-          echo ""
-          echo "✅ Submitted to Edge Add-ons for review!"
+          COMMIT_HTTP=$(head -1 commit_headers.txt | awk '{print $2}')
+          echo "Commit HTTP: $COMMIT_HTTP | Body: $COMMIT_RESP"
+
+          if [ "$COMMIT_HTTP" = "202" ] || [ "$COMMIT_HTTP" = "200" ]; then
+            echo "✅ Submitted to Edge Add-ons for review!"
+          else
+            echo "⚠️ Commit returned HTTP $COMMIT_HTTP — may need manual review"
+          fi
         env:
           EDGE_PRODUCT_ID: ${{ secrets.EDGE_PRODUCT_ID }}
           EDGE_API_TOKEN: ${{ secrets.EDGE_API_TOKEN }}
+          EDGE_CLIENT_ID: ${{ secrets.EDGE_CLIENT_ID }}
