@@ -10,7 +10,7 @@
 
 <p align="center">
   <a href="https://github.com/chu0119/xingchuan-ti/releases"><img src="https://img.shields.io/badge/version-0.6.3-blue?style=flat-square" alt="version"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green?style=flat-square" alt="license"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPLv3-green?style=flat-square" alt="license"></a>
   <a href="#"><img src="https://img.shields.io/badge/tests-passing-brightgreen?style=flat-square" alt="tests"></a>
   <a href="#"><img src="https://img.shields.io/badge/Chrome-Manifest%20V3-yellow?style=flat-square" alt="chrome"></a>
   <a href="#"><img src="https://img.shields.io/badge/TypeScript-5.x-blue?style=flat-square" alt="typescript"></a>
@@ -248,7 +248,16 @@ npm run screenshots     # 拍摄 README 截图
 
 ## 📄 许可证
 
-[MIT](LICENSE)
+[GPLv3](LICENSE)
+
+本项目采用 **GNU General Public License v3.0** 开源许可。
+
+- ✅ 任何人可以免费使用、修改、分发
+- ✅ 修改后的衍生作品**必须以相同协议（GPLv3）开源**
+- ✅ 必须保留原作者署名
+- ❌ **不得闭源商用**（除非获得原作者单独授权）
+
+> **双重许可**：如需在商业产品中闭源使用本扩展，请联系原作者获取商业许可。
 
 ## 🙏 致谢
 

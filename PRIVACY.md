@@ -66,7 +66,7 @@
 
 本扩展是开源软件，源代码可在 GitHub 上公开审查：
 
-https://github.com/chu0119/xingchuan-ti
+https://github.com/chu0119/xingchuan-ti（GPLv3 许可证）
 
 任何人都可以审查代码以验证本隐私政策的准确性。
 
