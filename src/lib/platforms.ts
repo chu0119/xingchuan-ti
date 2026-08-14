@@ -18,8 +18,15 @@ export interface Platform {
 }
 
 const ip = (base: (v: string) => string): Platform['buildUrl'] => (t, v) => (t === 'ip' ? base(v) : null);
-const both = (ipFn: (v: string) => string, domFn: (v: string) => string): Platform['buildUrl'] => (t, v) =>
-  t === 'ip' ? ipFn(v) : t === 'domain' ? domFn(v) : null;
+const both = (ipFn: (v: string) => string, domFn: (v: string) => string): Platform['buildUrl'] => (t, v) => {
+  if (t === 'ip') return ipFn(v);
+  if (t === 'domain') return domFn(v);
+  if (t === 'url') {
+    try { return domFn(new URL(v).hostname.toLowerCase()); } catch { return null; }
+  }
+  if (t === 'hash') return null; // 哈希类型：仅 VT 支持，由 VT 单独处理
+  return null;
+};
 
 export const PLATFORMS: Platform[] = [
   // ===== 国内 =====
@@ -43,8 +50,14 @@ export const PLATFORMS: Platform[] = [
     buildUrl: ip(v => `https://m.ip138.com/iplookup.asp?ip=${v}`), color: '#8d6e63' },
 
   // ===== 国外 =====
-  { id: 'virustotal', name: 'VirusTotal', region: 'intl', supports: ['ip', 'domain'], favicon: 'www.virustotal.com',
-    buildUrl: both(v => `https://www.virustotal.com/gui/ip-address/${v}`, v => `https://www.virustotal.com/gui/domain/${v}`), color: '#1a73e8' },
+  { id: 'virustotal', name: 'VirusTotal', region: 'intl', supports: ['ip', 'domain', 'hash'], favicon: 'www.virustotal.com',
+    buildUrl: (t, v) => {
+      if (t === 'ip') return `https://www.virustotal.com/gui/ip-address/${v}`;
+      if (t === 'domain') return `https://www.virustotal.com/gui/domain/${v}`;
+      if (t === 'hash') return `https://www.virustotal.com/gui/file/${v}`;
+      if (t === 'url') { try { return `https://www.virustotal.com/gui/domain/${new URL(v).hostname.toLowerCase()}`; } catch { return null; } }
+      return null;
+    }, color: '#1a73e8' },
   { id: 'abuseipdb', name: 'AbuseIPDB', region: 'intl', supports: ['ip'], favicon: 'www.abuseipdb.com',
     buildUrl: ip(v => `https://www.abuseipdb.com/check/${v}`), color: '#0d47a1' },
   { id: 'otx', name: 'AlienVault', region: 'intl', supports: ['ip', 'domain'], favicon: 'otx.alienvault.com',

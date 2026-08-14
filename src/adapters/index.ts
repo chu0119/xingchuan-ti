@@ -14,3 +14,4 @@ export const ADAPTERS: Adapter[] = [virustotal, abuseipdb, otx, shodan, greynois
 export const ADAPTER_MAP: Record<string, Adapter> = Object.fromEntries(ADAPTERS.map(a => [a.id, a]));
 
 export type { Adapter, QueryResult, Verdict, IndicatorType } from './types';
+export { extractHost } from '../lib/http';

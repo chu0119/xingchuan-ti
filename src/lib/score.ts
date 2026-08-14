@@ -1,6 +1,6 @@
 // 加权综合评分：只有"报恶意/可疑"的源提供威胁证据并决定分数；
 // clean（无威胁情报=查无记录）不稀释分数。unknown 与 error 不参与。
-// 这样 VT/微步判恶意时，不会被某个 clean 源平均成"可疑"。
+// URL 类型查询：从 URL 提取域名后查询各源，评分逻辑与域名相同。
 
 import type { AggregateResult, QueryResult, Settings, Verdict } from '../adapters/types';
 
@@ -30,6 +30,8 @@ export function aggregate(results: QueryResult[], settings: Settings): Aggregate
     if (cleanCount > 0) return { score: 0, label: 'clean', contributors: cleanCount };
     return { score: null, label: 'unknown', contributors: 0 };
   }
+
+  // URL 查询：从 URL 提取域名后查询各源，评分逻辑与域名相同
 
   // 分数 = 恶意(100)/可疑(50) 的加权平均；clean 不参与
   const score = Math.round((malW * 100 + suspW * 50) / flagW);

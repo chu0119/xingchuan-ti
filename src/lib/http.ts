@@ -42,3 +42,12 @@ export function qs(params: Record<string, string | number | undefined>): string 
   }
   return sp.toString();
 }
+
+/** 从 URL 中提取域名（用于适配器将 URL 降级为域名查询）。 */
+export function extractHost(url: string): string {
+  try {
+    return new URL(url).hostname.toLowerCase();
+  } catch {
+    return url;
+  }
+}

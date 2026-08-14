@@ -3,6 +3,7 @@
 
 import type { IndicatorType, QueryResult } from '../src/adapters/types';
 import { ADAPTERS } from '../src/adapters';
+import { extractHost } from '../src/lib/http';
 import { getSettings } from '../src/lib/storage';
 import { aggregate } from '../src/lib/score';
 import { tryConsume } from '../src/lib/rateLimit';
@@ -38,10 +39,14 @@ async function runQuery(
     if (cached) return { ok: true, type, value, results: cached.results, aggregate: cached.aggregate };
   }
 
+  // URL 类型：从 URL 提取域名后查询各源（评分逻辑与域名相同）
+  const queryType: IndicatorType = type === 'url' ? 'domain' : type;
+  const queryValue = type === 'url' ? extractHost(value) : value;
+
   const enabled = ADAPTERS.filter(a => {
     const s = settings.sources[a.id];
     if (!s?.enabled) return false;
-    if (!a.supports.includes(type)) return false;
+    if (!a.supports.includes(queryType)) return false;
     if (a.requiresKey && !s.apiKey) return false;
     return true;
   });
@@ -56,7 +61,7 @@ async function runQuery(
         return;
       }
       try {
-        results.push(await a.query(type, value, s.apiKey));
+        results.push(await a.query(queryType, queryValue, s.apiKey));
       } catch (e: any) {
         results.push(errorResult(a.id, a.name, e?.message || String(e)));
       }

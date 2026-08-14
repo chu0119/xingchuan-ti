@@ -1,7 +1,7 @@
 // 统一的情报源适配器类型定义。
 // 所有适配器把各自平台的返回归一到这里的 QueryResult，编排器据此做加权评分。
 
-export type IndicatorType = 'ip' | 'domain';
+export type IndicatorType = 'ip' | 'domain' | 'url' | 'hash';
 
 /** 单源判定结果（归一后）。 */
 export type Verdict = 'malicious' | 'suspicious' | 'clean' | 'unknown';

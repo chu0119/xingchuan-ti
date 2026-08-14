@@ -26,7 +26,8 @@
     "test:adapters": "esbuild test/adapters.test.ts --bundle --platform=node --format=esm --outfile=.output/adapters.mjs && node .output/adapters.mjs",
     "test:e2e": "npm run build && node test/e2e.mjs",
     "test:popup": "npm run build && node test/popup-check.mjs",
-    "test:live": "esbuild test/live.test.ts --bundle --platform=node --format=esm --outfile=.output/live.mjs && node .output/live.mjs"
+    "test:live": "esbuild test/live.test.ts --bundle --platform=node --format=esm --outfile=.output/live.mjs && node .output/live.mjs",
+    "test:batch": "npm run build && node test/batch-check.mjs"
   },
   "devDependencies": {
     "@resvg/resvg-js": "^2.6.2",

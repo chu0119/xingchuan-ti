@@ -26,15 +26,14 @@ const sleep = (ms) => new Promise(r => setTimeout(r, ms));
     await page.goto(`chrome-extension://${id}/popup.html`);
     await page.waitForSelector('.pp-in');
     await sleep(400);
-    const inputCount = await page.locator('input').count();
-    const inputs = await page.locator('input').evaluateAll(els => els.map(e => ({ cls: e.className, ph: e.placeholder, type: e.type, html: e.outerHTML.slice(0, 100) })));
-    console.log('输入框明细:', JSON.stringify(inputs, null, 2));
+    const inputCount = await page.locator('textarea.pp-in').count();
+    console.log('textarea 数量:', inputCount);
     await page.screenshot({ path: path.join(root, '.output/popup-initial.png') });
     if (inputCount !== 1) {
-      console.error('❌ 输入框数量不为 1');
+      console.error('❌ textarea 数量不为 1');
       process.exit(1);
     }
-    console.log('✅ 弹窗初始只有 1 个输入框');
+    console.log('✅ 弹窗初始只有 1 个 textarea');
   } finally {
     await ctx.close();
   }

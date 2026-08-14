@@ -24,10 +24,10 @@ eq('ipv4 带噪音', detectIndicator('连接到 1.2.3.4 即可'), { type: 'ip', 
 eq('域名', detectIndicator('example.com'), { type: 'domain', value: 'example.com' });
 eq('多级域名', detectIndicator('a.b.example.org'), { type: 'domain', value: 'a.b.example.org' });
 eq('URL 取 host(域)', detectIndicator('https://www.example.com/path?q=1'), {
-  type: 'domain',
-  value: 'www.example.com',
+  type: 'url',
+  value: 'https://www.example.com/path?q=1',
 });
-eq('URL 取 host(IP)+去端口', detectIndicator('http://10.0.0.1:8080/x'), { type: 'ip', value: '10.0.0.1' });
+eq('URL 取 host(IP)+去端口', detectIndicator('http://10.0.0.1:8080/x'), { type: 'url', value: 'http://10.0.0.1:8080/x' });
 eq('非法(纯文本)', detectIndicator('hello world'), null);
 eq('空串', detectIndicator(''), null);
 eq('大小写归一', detectIndicator('EXAMPLE.COM'), { type: 'domain', value: 'example.com' });
@@ -42,6 +42,31 @@ eq('ipv6 URL 取 host', detectIndicator('http://[2001:db8::1]:8080/path'), { typ
 eq('ipv6 子串提取', detectIndicator('源地址 2001:db8::ff00:42:8329 已记录'), { type: 'ip', value: '2001:db8::ff00:42:8329' });
 eq('非ipv6(host:port域)', detectIndicator('example.com:8080'), { type: 'domain', value: 'example.com' });
 eq('ipv6 不误判域名', isIPv6('example.com'), false);
+
+// URL 识别
+eq('URL 完整识别', detectIndicator('http://malware.example.com/payload.exe'), { type: 'url', value: 'http://malware.example.com/payload.exe' });
+eq('URL https', detectIndicator('https://phishing.site/login.php'), { type: 'url', value: 'https://phishing.site/login.php' });
+eq('URL 带端口', detectIndicator('http://c2.example.com:8080/beacon'), { type: 'url', value: 'http://c2.example.com:8080/beacon' });
+eq('非URL(纯域名)', detectIndicator('example.com'), { type: 'domain', value: 'example.com' });
+
+// detectAll 中的 URL 提取
+const allUrl = detectAll('see http://malware.com/payload and 1.2.3.4 and example.org');
+eq('detectAll 提取 URL', allUrl.some(d => d.type === 'url' && d.value.includes('malware.com')), true);
+eq('detectAll URL 后域名去重', allUrl.filter(d => d.type === 'domain' && d.value === 'malware.com').length, 0);
+
+// 跳转 URL 类型
+const tbUrl = PLATFORMS.find(p => p.id === 'threatbook')!;
+eq('微步 URL→域名跳转', tbUrl.buildUrl('url', 'http://malware.example.com/path'), 'https://x.threatbook.com/v5/domain/malware.example.com');
+eq('微步 URL→null(无效URL)', tbUrl.buildUrl('url', 'not-a-url'), null);
+
+// 哈希识别
+eq('MD5 识别', detectIndicator('44d88612fea8a8f36de82e1278abb02f'), { type: 'hash', value: '44d88612fea8a8f36de82e1278abb02f' });
+eq('SHA1 识别', detectIndicator('da39a3ee5e6b4b0d3255bfef95601890afd80709'), { type: 'hash', value: 'da39a3ee5e6b4b0d3255bfef95601890afd80709' });
+eq('SHA256 识别', detectIndicator('e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'), { type: 'hash', value: 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855' });
+eq('非哈希(太短)', detectIndicator('abc123'), null);
+eq('非哈希(含非hex)', detectIndicator('44d88612fea8a8f36de82e1278abb02g'), null);
+eq('VT 哈希跳转', PLATFORMS.find(p => p.id === 'virustotal')!.buildUrl('hash', '44d88612fea8a8f36de82e1278abb02f'), 'https://www.virustotal.com/gui/file/44d88612fea8a8f36de82e1278abb02f');
+eq('detectAll 提取哈希', detectAll('hash is 44d88612fea8a8f36de82e1278abb02f and 1.2.3.4').some(d => d.type === 'hash'), true);
 
 // ===== 加权评分 =====
 function mkSettings(weights: Record<string, number>): Settings {

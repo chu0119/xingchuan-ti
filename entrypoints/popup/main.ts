@@ -6,6 +6,7 @@ import { getSettings, saveSettings } from '../../src/lib/storage';
 import { clearHistory, getHistory } from '../../src/lib/history';
 import { queryBackground } from '../../src/lib/messaging';
 import type { QueryResponse } from '../../src/lib/messaging';
+import type { AggregateResult } from '../../src/adapters/types';
 import type { RenderOpts } from '../../src/ui/panel';
 import { renderLoading, renderResults } from '../../src/ui/panel';
 import { PANEL_CSS, THEME_VARS } from '../../src/ui/css';
@@ -33,6 +34,22 @@ body{margin:0;width:400px;background:var(--bg);color:var(--fg);font:13px/1.55 -a
 .pp-out{max-height:560px;overflow:auto;}
 .pp-foot{display:flex;align-items:center;padding:9px 12px;border-top:1px solid var(--border2);font-size:11px;color:var(--muted);background:var(--softbg);}
 .pp-hint{padding:26px 18px;text-align:center;color:var(--muted);font-size:12px;line-height:1.8;white-space:pre-line;}
+.batch-wrap{padding:8px;}
+.batch-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+.batch-summary{display:flex;gap:8px;align-items:center;font-size:12px;flex-wrap:wrap;}
+.batch-stat{padding:3px 8px;border-radius:8px;background:var(--chipbg);color:var(--chips);font-weight:600;}
+.batch-stat.mal{background:rgba(229,57,53,.12);color:#e53935;}
+.batch-stat.susp{background:rgba(251,140,0,.12);color:#fb8c00;}
+.batch-stat.clean{background:rgba(67,160,71,.12);color:#43a047;}
+.batch-export{background:var(--chipbg);color:var(--fg);border:1px solid var(--border);border-radius:7px;padding:5px 12px;font-size:11px;cursor:pointer;}
+.batch-export:hover{background:var(--hover);}
+.batch-list{max-height:420px;overflow:auto;}
+.batch-row{display:flex;align-items:center;gap:8px;padding:7px 9px;border-radius:8px;cursor:pointer;border-bottom:1px solid var(--border2);}
+.batch-row:hover{background:var(--softbg);}
+.batch-dot{width:8px;height:8px;border-radius:50%;flex:none;}
+.batch-val{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--fg);}
+.batch-label{font-size:11px;font-weight:600;min-width:32px;}
+.batch-sc{font-size:11px;color:var(--muted);min-width:24px;text-align:right;}
 /* 历史二级页 */
 .pp-histhead{display:flex;align-items:center;gap:8px;padding:11px 12px;border-bottom:1px solid var(--border2);background:linear-gradient(180deg,var(--softbg),var(--bg));}
 .pp-histhead .t{font-weight:700;font-size:14px;flex:1;}
@@ -53,8 +70,8 @@ const MOON = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke
 const HIST = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>`;
 const BACK = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>`;
 
-const VC: Record<string, string> = { malicious: '#e53935', suspicious: '#fb8c00', clean: '#43a047', unknown: '#9e9e9e' };
-const VT: Record<string, string> = { malicious: '恶意', suspicious: '可疑', clean: '干净', unknown: '未知' };
+const VC: Record<string, string> = { malicious: '#e53935', suspicious: '#fb8c00', clean: '#43a047', unknown: '#9e9e9e', error: '#e53935' };
+const VERDICT_TEXT: Record<string, string> = { malicious: '恶意', suspicious: '可疑', clean: '干净', unknown: '未知' };
 
 const settings = await getSettings();
 document.documentElement.dataset.theme = resolvedTheme(settings.theme);
@@ -62,10 +79,22 @@ document.head.append(h('style', { text: THEME_VARS }), h('style', { text: PANEL_
 
 // ===== 主视图 =====
 const out = h('div', { class: 'pp-out' });
-const input = h('input', { class: 'pp-in', placeholder: '输入 IP 或域名…', spellcheck: 'false' }) as HTMLInputElement;
+const input = h('textarea', {
+  class: 'pp-in',
+  placeholder: '输入 IP / 域名 / URL / 哈希（多行自动批量查询）',
+  spellcheck: 'false',
+  rows: '1',
+  style: 'resize:none;overflow:hidden;height:auto;',
+}) as HTMLTextAreaElement;
 const goBtn = h('button', { class: 'pp-go', text: '查询' });
 const themeBtn = h('button', { class: 'pp-ibtn', title: '切换亮/暗主题' });
 const histBtn = h('button', { class: 'pp-ibtn', html: HIST, title: '最近查询' });
+
+// textarea 自动高度
+input.addEventListener('input', () => {
+  input.style.height = 'auto';
+  input.style.height = Math.min(input.scrollHeight, 120) + 'px';
+});
 function syncThemeIcon() {
   themeBtn.innerHTML = resolvedTheme(settings.theme) === 'dark' ? SUN : MOON;
 }
@@ -135,13 +164,99 @@ function ppHint(text: string) {
 function doQuery(nocache = false) {
   const list = detectAll(input.value);
   if (!list.length) {
-    ppHint('无法识别为 IP 或域名，请检查输入');
+    ppHint('无法识别为 IP / 域名 / URL / 哈希，请检查输入');
     return;
   }
-  queryAndShow(list, 0, nocache);
+  // 多行/多指标：批量模式
+  const lines = input.value.split('\n').filter(l => l.trim());
+  if (lines.length > 1 || list.length > 1) {
+    batchQuery(list, nocache);
+  } else {
+    queryAndShow(list, 0, nocache);
+  }
 }
+
+// ===== 批量查询 =====
+async function batchQuery(list: Detected[], nocache = false) {
+  ppHint(`正在批量查询 ${list.length} 个指标…`);
+  const results: { det: Detected; agg: AggregateResult; err?: string }[] = [];
+  let done = 0;
+  for (const det of list) {
+    const res = await queryBackground({ kind: 'query', type: det.type, value: det.value, nocache });
+    if (res.ok) {
+      results.push({ det, agg: res.aggregate });
+    } else {
+      results.push({ det, agg: { score: null, label: 'unknown', contributors: 0 }, err: res.error });
+    }
+    done++;
+    ppHint(`正在批量查询 ${list.length} 个指标… (${done}/${list.length})`);
+  }
+  renderBatchResults(results);
+}
+
+function renderBatchResults(results: { det: Detected; agg: AggregateResult; err?: string }[]) {
+  const mal = results.filter(r => r.agg.label === 'malicious').length;
+  const susp = results.filter(r => r.agg.label === 'suspicious').length;
+  const clean = results.filter(r => r.agg.label === 'clean').length;
+  const unknown = results.filter(r => r.agg.label === 'unknown').length;
+
+  const summary = h('div', { class: 'batch-summary' }, [
+    h('span', { class: 'batch-stat', text: `共 ${results.length} 个` }),
+    mal ? h('span', { class: 'batch-stat mal', text: `恶意 ${mal}` }) : null,
+    susp ? h('span', { class: 'batch-stat susp', text: `可疑 ${susp}` }) : null,
+    clean ? h('span', { class: 'batch-stat clean', text: `干净 ${clean}` }) : null,
+    unknown ? h('span', { class: 'batch-stat', text: `未知 ${unknown}` }) : null,
+  ]);
+
+  const rows = results.map(r => {
+    const v = r.err ? 'error' : r.agg.label;
+    const sc = r.err ? '!' : r.agg.score == null ? '—' : String(r.agg.score);
+    const icon = h('span', { class: 'batch-dot', style: { background: VC[v] || '#9e9e9e' } });
+    const val = h('span', { class: 'batch-val', text: r.det.value });
+    const label = h('span', { class: 'batch-label', text: r.err ? '出错' : VERDICT_TEXT[v] || v });
+    const score = h('span', { class: 'batch-sc', text: sc });
+    const row = h('div', { class: 'batch-row', dataset: { v } }, [icon, val, label, score]);
+    row.addEventListener('click', () => queryAndShow([r.det], 0, false));
+    return row;
+  });
+
+  const exportBtn = h('button', {
+    class: 'batch-export',
+    text: '导出 CSV',
+    onClick: () => exportBatchCSV(results),
+  });
+
+  out.replaceChildren(
+    h('div', { class: 'batch-wrap' }, [
+      h('div', { class: 'batch-head' }, [summary, exportBtn]),
+      h('div', { class: 'batch-list' }, rows),
+    ]),
+  );
+}
+
+function exportBatchCSV(results: { det: Detected; agg: AggregateResult; err?: string }[]) {
+  const header = '类型,值,判定,分数,错误\n';
+  const body = results.map(r => {
+    const v = r.err ? 'error' : r.agg.label;
+    const sc = r.agg.score ?? '';
+    return `${r.det.type},${r.det.value},${v},${sc},${r.err || ''}`;
+  }).join('\n');
+  const blob = new Blob([header + body], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `xingchuan-ti-batch-${new Date().toISOString().slice(0, 10)}.csv`;
+  document.body.append(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
 goBtn.addEventListener('click', () => doQuery(false));
-input.addEventListener('keydown', e => { if (e.key === 'Enter') doQuery(false); });
+input.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); doQuery(false); }
+  if (e.key === 'Enter' && e.shiftKey) { /* shift+enter 换行 */ }
+});
 
 // ===== 主题切换 =====
 themeBtn.addEventListener('click', async () => {
@@ -166,7 +281,7 @@ async function renderHistory() {
     const item = h('div', { class: 'pp-hi' }, [
       h('span', { class: 'pp-hic', text: '●', style: { color: VC[it.label ?? 'unknown'] } }),
       h('span', { class: 'pp-hiv', text: it.value }),
-      h('span', { class: 'pp-him', text: `${VT[it.label ?? 'unknown'] ?? ''} · ${it.score ?? '—'}` }),
+      h('span', { class: 'pp-him', text: `${VERDICT_TEXT[it.label ?? 'unknown'] ?? ''} · ${it.score ?? '—'}` }),
     ]);
     item.addEventListener('click', () => {
       input.value = it.value;

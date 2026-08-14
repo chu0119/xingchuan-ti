@@ -2,12 +2,16 @@
 // 文档：https://docs.virustotal.com/reference/ip-info （免费 Public API：4次/分、500次/天）
 // 判定：last_analysis_stats.malicious 引擎数 → 阈值。
 
-import type { Adapter } from './types';
+import type { Adapter, IndicatorType } from './types';
 import { fetchJson } from '../lib/http';
 
 const BASE = 'https://www.virustotal.com/api/v3';
 
-function gui(type: 'ip' | 'domain', v: string) {
+function gui(type: IndicatorType, v: string) {
+  if (type === 'url') {
+    try { v = new URL(v).hostname.toLowerCase(); } catch { /* keep */ }
+    type = 'domain';
+  }
   return type === 'ip'
     ? `https://www.virustotal.com/gui/ip-address/${v}`
     : `https://www.virustotal.com/gui/domain/${v}`;
@@ -16,11 +20,18 @@ function gui(type: 'ip' | 'domain', v: string) {
 export const virustotal: Adapter = {
   id: 'virustotal',
   name: 'VirusTotal',
-  supports: ['ip', 'domain'],
+  supports: ['ip', 'domain', 'hash'],
   requiresKey: true,
   rateLimit: { perMin: 4, perDay: 500 },
   async query(type, value, key) {
-    const path = type === 'ip' ? `ip_addresses/${value}` : `domains/${value}`;
+    let path: string;
+    if (type === 'hash') {
+      path = `files/${value}`;
+    } else if (type === 'ip') {
+      path = `ip_addresses/${value}`;
+    } else {
+      path = `domains/${value}`;
+    }
     const data = await fetchJson(`${BASE}/${path}`, {
       headers: { 'x-apikey': key, accept: 'application/json' },
     });
@@ -53,7 +64,9 @@ export const virustotal: Adapter = {
       score,
       summary: `${malicious}/${total} 引擎判定恶意（可疑 ${suspicious}）`,
       tags,
-      detailsUrl: gui(type, value),
+      detailsUrl: type === 'hash'
+        ? `https://www.virustotal.com/gui/file/${value}`
+        : gui(type, value),
       queriedAt: Date.now(),
     };
   },
