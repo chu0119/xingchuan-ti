@@ -43,6 +43,10 @@ export interface AggregateResult {
   label: Verdict;
   /** 实际参与评分的源数量 */
   contributors: number;
+  /** 报恶意/可疑的源数（确认恶意/可疑） */
+  flagCount: number;
+  /** 报 clean 的源数 */
+  cleanCount: number;
 }
 
 export interface SourceSetting {

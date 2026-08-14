@@ -58,7 +58,7 @@ const mal: QueryResult[] = [
   { source: 'greynoise', sourceName: 'GreyNoise', verdict: 'malicious', score: 80, summary: '恶意扫描器（活跃扫描）', tags: ['SSH Scanner'], detailsUrl: '#', queriedAt: 0 },
   { source: 'otx', sourceName: 'AlienVault OTX', verdict: 'suspicious', score: 42, summary: '相关 6 个威胁 Pulse', tags: ['Emotet'], detailsUrl: '#', queriedAt: 0 },
 ];
-const malAgg: AggregateResult = { score: 81, label: 'malicious', contributors: 5 };
+const malAgg: AggregateResult = { score: 81, label: 'malicious', contributors: 5, flagCount: 4, cleanCount: 1 };
 
 function buildPopup(theme: 'light' | 'dark') {
   const out = h('div', { class: 'pp-out' });

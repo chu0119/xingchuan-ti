@@ -47,23 +47,45 @@ export const shodan: Adapter = {
 
     const ports: number[] = data.ports ?? [];
     const vulns: string[] = data.vulns ?? [];
+    const vulnsObj: Record<string, { cvss?: number }> = data.vulns_details ?? {};
     const tags: string[] = [];
     if (data.org) tags.push(data.org);
     if (data.country_name) tags.push(data.country_name);
     ports.slice(0, 6).forEach(p => tags.push(`端口 ${p}`));
     vulns.slice(0, 4).forEach(v => tags.push(v));
 
-    const verdict = vulns.length > 0 ? 'suspicious' : 'unknown';
-    const score = vulns.length > 0 ? Math.min(60, 20 + vulns.length * 8) : null;
+    // CVSS 评分：取最高 CVSS 分
+    let maxCvss = 0;
+    for (const v of vulns) {
+      const cvss = vulnsObj[v]?.cvss;
+      if (cvss != null && cvss > maxCvss) maxCvss = cvss;
+    }
 
+    let verdict: 'malicious' | 'suspicious' | 'clean' | 'unknown';
+    let score: number | null;
+    if (maxCvss >= 7) {
+      verdict = 'malicious';
+      score = Math.min(100, 60 + maxCvss * 4);
+    } else if (maxCvss >= 4) {
+      verdict = 'suspicious';
+      score = Math.min(60, 30 + maxCvss * 5);
+    } else if (vulns.length > 0) {
+      verdict = 'suspicious';
+      score = 25;
+    } else {
+      verdict = 'clean';
+      score = 0;
+    }
+
+    const cvssInfo = maxCvss > 0 ? `（最高 CVSS ${maxCvss}）` : '';
     return {
       source: 'shodan',
       sourceName: 'Shodan',
       verdict,
       score,
       summary: vulns.length
-        ? `${vulns.length} 个已知漏洞，开放 ${ports.length} 端口`
-        : `开放 ${ports.length} 个端口（无定性）`,
+        ? `${vulns.length} 个已知漏洞${cvssInfo}，开放 ${ports.length} 端口`
+        : `开放 ${ports.length} 个端口，无已知漏洞`,
       tags,
       detailsUrl: `https://www.shodan.io/host/${value}`,
       queriedAt: Date.now(),

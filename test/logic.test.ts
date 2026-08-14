@@ -97,6 +97,9 @@ eq('全干净标签clean', aggregate([r('a', 'clean')], mkSettings({ a: 1 })).la
 eq('仅unknown→null', aggregate([r('a', 'unknown')], mkSettings({ a: 1 })).score, null);
 eq('error被忽略', aggregate([r('a', 'malicious'), { ...r('b', 'unknown'), error: 'x' }], mkSettings({ a: 1, b: 1 })).score, 100);
 eq('contributors含clean', aggregate([r('a', 'malicious'), r('b', 'clean'), r('c', 'unknown')], mkSettings({ a: 1, b: 1, c: 1 })).contributors, 2);
+eq('flagCount=1', aggregate([r('a', 'malicious'), r('b', 'clean')], mkSettings({ a: 1, b: 1 })).flagCount, 1);
+eq('cleanCount=1', aggregate([r('a', 'malicious'), r('b', 'clean')], mkSettings({ a: 1, b: 1 })).cleanCount, 1);
+eq('双恶意flagCount=2', aggregate([r('a', 'malicious'), r('b', 'malicious')], mkSettings({ a: 1, b: 1 })).flagCount, 2);
 
 // ===== 跳转 URL =====
 const tb = PLATFORMS.find(p => p.id === 'threatbook')!;

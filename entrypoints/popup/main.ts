@@ -186,7 +186,7 @@ async function batchQuery(list: Detected[], nocache = false) {
     if (res.ok) {
       results.push({ det, agg: res.aggregate });
     } else {
-      results.push({ det, agg: { score: null, label: 'unknown', contributors: 0 }, err: res.error });
+      results.push({ det, agg: { score: null, label: 'unknown', contributors: 0, flagCount: 0, cleanCount: 0 }, err: res.error });
     }
     done++;
     ppHint(`正在批量查询 ${list.length} 个指标… (${done}/${list.length})`);

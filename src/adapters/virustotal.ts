@@ -46,12 +46,15 @@ export const virustotal: Adapter = {
 
     let verdict: 'malicious' | 'suspicious' | 'clean' | 'unknown';
     let score: number;
-    if (malicious >= 3) {
+    if (malicious >= 6) {
       verdict = 'malicious';
-      score = Math.min(100, 45 + malicious * 6);
+      score = Math.min(100, 70 + malicious * 3);
+    } else if (malicious >= 2) {
+      verdict = 'malicious';
+      score = Math.min(100, 50 + malicious * 8);
     } else if (malicious >= 1 || suspicious >= 2) {
       verdict = 'suspicious';
-      score = 40;
+      score = 35;
     } else {
       verdict = total > 0 ? 'clean' : 'unknown';
       score = 0;

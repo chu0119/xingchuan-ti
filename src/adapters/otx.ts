@@ -23,10 +23,13 @@ export const otx: Adapter = {
     const count = pi.count ?? 0;
     const tags: string[] = [];
 
-    // 相关 pulse 名称
+    // 相关 pulse 名称 + 质量（subscriber_count）
     const pulses = Array.isArray(pi.pulses) ? pi.pulses : [];
-    for (const p of pulses.slice(0, 5)) {
+    let qualityScore = 0;
+    for (const p of pulses.slice(0, 8)) {
       if (p?.name) tags.push(p.name);
+      const subs = p?.subscriber_count ?? 0;
+      qualityScore += Math.min(subs, 100);
     }
     // 关联恶意软件家族（related 是对象）
     const rel = pi.related ?? {};
@@ -37,17 +40,19 @@ export const otx: Adapter = {
       }
     }
 
+    // 综合评分：pulse 数量 + 质量（高订阅 pulse 加权）
+    const weighted = count + qualityScore * 0.02;
     let verdict: 'malicious' | 'suspicious' | 'clean' | 'unknown';
     let score: number | null;
-    if (count >= 15) {
+    if (weighted >= 20) {
       verdict = 'malicious';
-      score = Math.min(100, 50 + count * 2);
-    } else if (count >= 3) {
+      score = Math.min(100, 50 + weighted * 2);
+    } else if (weighted >= 5) {
       verdict = 'suspicious';
-      score = 40 + count * 2;
+      score = Math.min(70, 30 + weighted * 4);
     } else if (count > 0) {
       verdict = 'suspicious';
-      score = 30;
+      score = 25;
     } else {
       verdict = 'clean';
       score = 0;

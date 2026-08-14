@@ -27,16 +27,14 @@ export function aggregate(results: QueryResult[], settings: Settings): Aggregate
   const flagW = malW + suspW;
   if (flagW === 0) {
     // 无任何威胁证据
-    if (cleanCount > 0) return { score: 0, label: 'clean', contributors: cleanCount };
-    return { score: null, label: 'unknown', contributors: 0 };
+    if (cleanCount > 0) return { score: 0, label: 'clean', contributors: cleanCount, flagCount: 0, cleanCount };
+    return { score: null, label: 'unknown', contributors: 0, flagCount: 0, cleanCount: 0 };
   }
-
-  // URL 查询：从 URL 提取域名后查询各源，评分逻辑与域名相同
 
   // 分数 = 恶意(100)/可疑(50) 的加权平均；clean 不参与
   const score = Math.round((malW * 100 + suspW * 50) / flagW);
   const label: Verdict = score >= 66 ? 'malicious' : 'suspicious';
-  return { score, label, contributors: flagCount + cleanCount };
+  return { score, label, contributors: flagCount + cleanCount, flagCount, cleanCount };
 }
 
 export const LABEL_TEXT: Record<Verdict, string> = {

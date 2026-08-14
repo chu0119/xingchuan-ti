@@ -205,11 +205,15 @@ export function renderResults(root: HTMLElement | ShadowRoot, p: PanelPayload, o
     h('span', { class: 'ti-value', text: p.value }),
     h('div', { class: 'ti-acts' }, acts),
   ]);
+  const flagInfo = agg.flagCount > 0
+    ? ` · ${agg.flagCount} 源确认${agg.label === 'malicious' ? '恶意' : '可疑'}`
+    : '';
+  const cleanInfo = agg.cleanCount > 0 ? ` · ${agg.cleanCount} 源查无记录` : '';
   const scoreband = h('div', { class: 'ti-scoreband' }, [
     h('div', { class: 'ti-ring', html: ring(agg.score, color) }),
     h('div', { class: 'ti-sinfo' }, [
       h('div', { class: 'lab', text: labelText, style: { color } }),
-      h('div', { class: 'meta', text: `综合置信度 ${agg.score == null ? '—' : agg.score + '/100'} · ${agg.contributors} 个情报源参与` }),
+      h('div', { class: 'meta', text: `综合置信度 ${agg.score == null ? '—' : agg.score + '/100'} · ${agg.contributors} 源参与${flagInfo}${cleanInfo}` }),
       h('div', { class: 'ti-legend' }, [
         h('span', {}, [h('i', { style: { background: LABEL_COLOR.malicious } }), '恶意']),
         h('span', {}, [h('i', { style: { background: LABEL_COLOR.suspicious } }), '可疑']),
