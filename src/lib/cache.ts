@@ -7,6 +7,8 @@ export async function getCached(type: string, value: string): Promise<any | null
     | { t: number; ttl: number; data: any }
     | undefined;
   if (v && Date.now() - v.t < v.ttl) return v.data;
+  // 过期则清理
+  if (v) chrome.storage.session.remove(k).catch(() => {});
   return null;
 }
 

@@ -12,7 +12,7 @@ export interface Detected {
 
 // 严格 IPv4（每段 0-255）
 const IPV4 = /^(?:(?:25[0-5]|2[0-4]\d|1?\d?\d)\.){3}(?:25[0-5]|2[0-4]\d|1?\d?\d)$/;
-const IPV4_SUB = /(?:(?:25[0-5]|2[0-4]\d|1?\d?\d)\.){3}(?:25[0-5]|2[0-4]\d|1?\d?\d)/;
+const IPV4_SUB = /(?:(?:25[0-5]|2[0-4]\d|1?\d?\d)\.){3}(?:25[0-5]|2[0-4]\d|1?\d?\d)\b/;
 // FQDN：多段标签 + 顶级域为纯字母（≥2）
 const DOMAIN = /^(?=.{1,253}$)(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$/;
 const DOMAIN_SUB = /(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}/;
@@ -138,8 +138,9 @@ export function detectAll(raw: string): Detected[] {
     }
   }
 
-  // 5. 提取文件哈希（MD5/SHA1/SHA256）
-  for (const m of raw.matchAll(HASH_RE)) {
+  // 5. 提取文件哈希（MD5/SHA1/SHA256）——每次创建新正则避免 lastIndex 状态问题
+  const hashRe = /\b[a-fA-F0-9]{64}\b|\b[a-fA-F0-9]{40}\b|\b[a-fA-F0-9]{32}\b/g;
+  for (const m of raw.matchAll(hashRe)) {
     const v = m[0].toLowerCase();
     if (!seen.has('hash:' + v)) {
       seen.add('hash:' + v);

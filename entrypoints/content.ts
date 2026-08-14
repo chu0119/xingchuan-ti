@@ -18,7 +18,7 @@ const FAB_CSS = `.ti-fab{display:inline-flex;align-items:center;gap:6px;backgrou
 const CLOSE_SVG = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>`;
 
 export default defineContentScript({
-  matches: ['<all_urls>'],
+  matches: ['http://*/*', 'https://*/*'],
   runAt: 'document_idle',
   main() {
     let fab: HTMLDivElement | null = null;

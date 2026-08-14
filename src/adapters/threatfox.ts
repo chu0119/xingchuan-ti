@@ -33,13 +33,13 @@ export const threatfox: Adapter = {
         score: 0,
         summary: 'ThreatFox 无匹配 IOC',
         tags: [],
-        detailsUrl: `https://threatfox.abuse.ch/browse/search/${encodeURIComponent(queryValue)}`,
+        detailsUrl: `https://threatfox.abuse.ch/browse.php?search=${encodeURIComponent(queryValue)}`,
         queriedAt: Date.now(),
       };
     }
 
-    if (data?.error) {
-      throw new Error(data.error);
+    if (data?.error || data?.query_status === 'illegal_search_term' || data?.query_status === 'rate_limit') {
+      throw new Error(data?.error || `ThreatFox: ${data?.query_status}`);
     }
 
     const iocs = Array.isArray(data?.data) ? data.data : [];

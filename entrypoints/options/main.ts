@@ -57,26 +57,26 @@ const settings = await getSettings();
 document.documentElement.dataset.theme = resolvedTheme(settings.theme);
 document.head.append(h('style', { text: THEME_VARS }), h('style', { text: PANEL_CSS }), h('style', { text: CSS }));
 
-// API Key 健康检查（页面加载时静默测试各 Key）
+// API Key 健康检查（手动触发，避免浪费配额）
 async function checkKeyHealth() {
+  const btn = document.getElementById('check-health-btn') as HTMLButtonElement;
+  if (btn) { btn.disabled = true; btn.textContent = '检测中…'; }
+  let ok = 0, fail = 0;
   for (const a of ADAPTERS) {
     const s = settings.sources[a.id];
     if (!s?.enabled || !s.apiKey || !a.requiresKey) continue;
+    const el = document.getElementById(`key-${a.id}`);
     try {
-      // 用一个常见 IP 测试（8.8.8.8），忽略结果，只看是否报错
       await a.query('ip', '8.8.8.8', s.apiKey);
-      const el = document.getElementById(`key-${a.id}`);
-      if (el) el.style.borderColor = '';
+      if (el) { el.style.borderColor = '#43a047'; el.title = 'Key 有效'; }
+      ok++;
     } catch (e: any) {
-      const el = document.getElementById(`key-${a.id}`);
-      if (el) {
-        el.style.borderColor = '#e53935';
-        el.title = `Key 可能无效：${e?.message || '请求失败'}`;
-      }
+      if (el) { el.style.borderColor = '#e53935'; el.title = `Key 可能无效：${e?.message || '请求失败'}`; }
+      fail++;
     }
   }
+  if (btn) { btn.disabled = false; btn.textContent = `检测完成 ✓ 有效 ${ok} 无效 ${fail}`; setTimeout(() => { btn.textContent = '检测所有 Key'; }, 3000); }
 }
-checkKeyHealth().catch(() => {});
 
 function themeSeg() {
   const wrap = h('div', { class: 'seg' });
@@ -174,10 +174,24 @@ fileInput.addEventListener('change', async () => {
     if (data?.type !== 'threat-intel-helper-config' || !data.settings || typeof data.settings !== 'object') {
       throw new Error('文件格式不正确');
     }
+    // 验证字段类型/范围
+    const s = data.settings;
+    if (typeof s.cacheTtlMin !== 'number' || s.cacheTtlMin < 0) s.cacheTtlMin = 10;
+    if (!['light', 'dark', 'auto'].includes(s.theme)) s.theme = 'auto';
+    if (typeof s.notifyOnMalicious !== 'boolean') s.notifyOnMalicious = true;
+    if (s.sources && typeof s.sources === 'object') {
+      for (const [k, v] of Object.entries(s.sources) as [string, any][]) {
+        if (v && typeof v === 'object') {
+          v.enabled = !!v.enabled;
+          v.apiKey = typeof v.apiKey === 'string' ? v.apiKey : '';
+          v.weight = typeof v.weight === 'number' && v.weight > 0 ? v.weight : 1;
+        }
+      }
+    }
     // 先禁止自动保存，清除已排队的 debounce，再写入
     skipAutoSave = true;
     clearTimeout(saveTimer);
-    await saveSettings(data.settings);
+    await saveSettings(s);
     setCfgStatus('已导入，正在刷新…', 'toast');
     setTimeout(() => location.reload(), 400);
   } catch (e: any) {
@@ -198,7 +212,10 @@ wrap.append(
 
   // 情报源 + 申请指引
   h('h2', {}, [h('span', { class: 'n', text: '2' }), '情报源（自动研判）']),
-  h('div', { class: 'tip', text: '勾选并填入 Key 后即参与多源加权研判；权重越大对综合评分影响越大。' }),
+  h('div', { class: 'tip' }, [
+    h('span', { text: '勾选并填入 Key 后即参与多源加权研判；权重越大对综合评分影响越大。' }),
+    h('button', { id: 'check-health-btn', class: 'btn2', text: '检测所有 Key', onClick: checkKeyHealth, style: { marginLeft: '10px' } }),
+  ]),
 );
 
 for (const a of ADAPTERS) {

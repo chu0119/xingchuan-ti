@@ -101,7 +101,7 @@ export const PANEL_CSS = `
 .ti-jico:hover{ box-shadow:0 0 0 2px var(--accent); transform:translateY(-1px); z-index:2; }
 .ti-jico img{ width:18px; height:18px; object-fit:contain; }
 .ti-jico::after{ content:attr(data-name); position:absolute; bottom:calc(100% + 6px); left:50%; transform:translateX(-50%);
-  background:#1f2329; color:#fff; font-size:11px; padding:3px 8px; border-radius:6px; white-space:nowrap; opacity:0;
+  background:var(--fg); color:var(--bg); font-size:11px; padding:3px 8px; border-radius:6px; white-space:nowrap; opacity:0;
   pointer-events:none; transition:opacity .12s; z-index:6; }
 .ti-jico:hover::after{ opacity:1; }
 

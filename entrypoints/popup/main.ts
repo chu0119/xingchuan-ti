@@ -72,6 +72,7 @@ body{margin:0;width:400px;background:var(--bg);color:var(--fg);font:13px/1.55 -a
 .pp-export-btn{background:var(--chipbg);color:var(--fg);border:1px solid var(--border);border-radius:7px;padding:5px 10px;font-size:11px;cursor:pointer;white-space:nowrap;}
 .pp-export-btn:hover{background:var(--hover);}
 .pp-quota{font-size:10px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px;}
+.pp-hist-hint{padding:6px 10px;font-size:10px;color:var(--muted);text-align:center;border-top:1px solid var(--border2);}
 `;
 
 const LOGO = `<svg viewBox="0 0 128 128" fill="none"><path d="M64 24 L98 37 V63 C98 88 83 104 64 110 C45 104 30 88 30 63 V37 Z" fill="#fff"/><circle cx="56" cy="57" r="13" fill="none" stroke="#4f46e5" stroke-width="7"/><line x1="65" y1="66" x2="76" y2="78" stroke="#4f46e5" stroke-width="8" stroke-linecap="round"/></svg>`;
@@ -341,6 +342,8 @@ async function renderHistory() {
     histList.append(h('div', { class: 'pp-empty', text: '暂无查询记录' }));
     return;
   }
+  // 底部提示
+  histList.append(h('div', { class: 'pp-hist-hint', text: `最多保留 100 条记录，当前 ${all.length} 条` }));
   for (const it of list.slice(0, 100)) {
     const item = h('div', { class: 'pp-hi' }, [
       h('span', { class: 'pp-hic', text: '●', style: { color: VC[it.label ?? 'unknown'] } }),
